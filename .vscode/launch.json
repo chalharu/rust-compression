@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Test",
+            "program": "${workspaceRoot}/target/debug/deps/lib-47666649066c41e9",
+            "args": [
+                "--nocapture"
+            ],
+            "cwd": "${workspaceRoot}",
+            "sourceLanguages": [
+                "rust"
+            ],
+            "preLaunchTask": "cargo build test",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug",
+            "program": "${workspaceRoot}/target/debug/chfft",
+            "args": [],
+            "cwd": "${workspaceRoot}",
+            "sourceLanguages": [
+                "rust"
+            ],
+            "preLaunchTask": "cargo build",
+            "internalConsoleOptions": "openOnSessionStart"
+        }
+    ]
+}

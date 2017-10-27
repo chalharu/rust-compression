@@ -1,0 +1,106 @@
+language: rust
+
+rust:
+- stable
+- beta
+- nightly
+
+sudo: false
+
+os:
+- linux
+
+matrix:
+  allow_failures:
+  - rust: nightly
+
+addons:
+  apt:
+    packages:
+    - libcurl4-openssl-dev
+    - libelf-dev
+    - libdw-dev
+    - binutils-dev
+    - libiberty-dev
+
+before_script:
+- |
+  if [ "${TRAVIS_OS_NAME}" = 'osx' ]; then
+    export PATH=$HOME/Library/Python/2.7/bin:$PATH
+  fi
+- |
+  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+    cargo install cargo-kcov
+    if [ ! -x $HOME/.cargo/bin/kcov ] || [ ! -f $HOME/.cargo/bin/kcov ]; then
+      mkdir kcov
+      cd kcov
+      cargo kcov --print-install-kcov-sh | sh
+      cd ${TRAVIS_BUILD_DIR}
+      rm -rf kcov
+    fi
+  fi
+- |
+  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+    pippackage=("ghp-import" "pytoml")
+    comm -13 <(pip freeze | cut -d= -f1 | sort) <(for i in ${pippackage[*]};do echo $i;done | sort) | grep -v '^#' | xargs pip install --user
+    export CARGO_PACKAGE_NAME=$(echo 'import pytoml as toml; print(toml.load(open("Cargo.toml", "rb"))["package"]["name"])' | python2)
+    echo CARGO_PACKAGE_NAME=$CARGO_PACKAGE_NAME
+  fi
+- |
+  if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
+    export FEATURES=""
+  else
+    export FEATURES=""
+  fi
+
+script:
+- cargo build --features="$FEATURES"
+- cargo test --no-run --features="$FEATURES"
+- cargo build --release --features="$FEATURES"
+- cargo test --release --no-run --features="$FEATURES"
+- |
+  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+    cargo kcov --coveralls --features="$FEATURES"
+  else
+    cargo test --features="$FEATURES"
+  fi
+- cargo test --release --features="$FEATURES"
+- |
+  if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
+    cargo bench --verbose --features="$FEATURES"
+  fi
+- |
+  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+    cargo doc --no-deps --features="docs" &&
+    echo "<meta http-equiv=refresh content=0;url=`echo $CARGO_PACKAGE_NAME`/index.html>" > target/doc/index.html &&
+    ghp-import -n target/doc
+  fi
+- |
+  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+    cargo login ${CRATES_TOKEN} &&
+    cargo package
+  fi
+
+after_success:
+- |
+  if [ "${TRAVIS_OS_NAME}" = "linux" ] &&
+     [ "${TRAVIS_RUST_VERSION}" = "stable" ] &&
+     [ "${TRAVIS_BRANCH}" = "master" ] &&
+     [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then
+    git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages &&
+    cargo publish
+  fi
+
+env:
+  global:
+  -  secure: ObntfZYU+M9946WV2ZynS04FnlRfPr+3Yr5Q3ukgmIvZ1GGqGQSh3PSqFhR3Mi1s80Vjs3l7rG3czBAX9RgrDJ1BhlaFdq6AFlMLe99gop4AvWVSWsqS/REbGONoD+bhkrJxeatVtmbt7MpowCppuS/xcI4xvNcVkCDwVL7isBUBzU9r6JyruEksV+XK7U2Umb8hYnTlqfxuxKIGcxWZWKQLQcq/AA5jiaCNRCzHeqUcw0BWpzngmF2UA6aA8lYCm/hWNX88SDJ+4CUM34MYiwH+NMKndTnhQB2jBqxRmo20DVpcUfqaRUph8jrDausdSB74zRCV/BQ+vW5nQLHbL0/zNeLFaM9KGKMLmoGx6rJMOp4jh5kliDtQumOQhC6afN+pSMh/CW19WJeMQS/y+yuhvHozqdBhO/2RDa/nGzpYwVuA1JSPvj+hNp+DZvQ88aD+96x6OkkWq/R49m3M4A8ZWIRzRSjZBnwDDBXfTDOdIYDWpTBAY87lK//mQa5PDNar0cTEnwXsv8gS7idgCgH6B7lXIgxVjsiCPp1eKh7eviz9orrpwAz/X9tq4cki4gX/dj3nHnEQqD2k6oiM0JlJSobVFObCt5lavyRNh6HrCIUtd1E0vvbqi8sFjDSoxaSkcm8elsnL0j06scQsp9smEC9z6wuHzuA/wt7ERtE=
+
+cache:
+  cargo: true
+  apt: true
+  pip: true
+
+notifications:
+  email:
+    on_success: never
+    on_failure: always
