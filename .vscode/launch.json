@@ -5,7 +5,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug Test",
-            "program": "${workspaceRoot}/target/debug/deps/lib-47666649066c41e9",
+            "program": "${workspaceRoot}/target/debug/deps/compression-35d303d47e1542f4",
             "args": [
                 "--nocapture"
             ],
