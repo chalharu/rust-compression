@@ -365,6 +365,14 @@ mod tests {
     }
 
     #[test]
+    fn leftbitwriter_write_1bit() {
+        let mut writer = LeftBitWriter::new(Vec::<u8>::new());
+        let _ = writer.write(&BitVector::new(1, 1));
+        let inner = writer.into_inner().unwrap();
+        assert_eq!(inner[0], 128);
+    }
+
+    #[test]
     fn leftbitwriter_zero() {
         let mut writer = LeftBitWriter::new(Vec::<u8>::new());
         let _ = writer.write(&BitVector::new(0, 10));
@@ -415,6 +423,14 @@ mod tests {
         let _ = writer.pad_flush();
         assert_eq!(writer.get_ref()[0], 0b00011101);
         assert_eq!(writer.get_ref().len(), 1);
+    }
+
+    #[test]
+    fn rightbitwriter_write_1bit() {
+        let mut writer = RightBitWriter::new(Vec::<u8>::new());
+        let _ = writer.write(&BitVector::new(1, 1));
+        let inner = writer.into_inner().unwrap();
+        assert_eq!(inner[0], 1);
     }
 
     #[test]
