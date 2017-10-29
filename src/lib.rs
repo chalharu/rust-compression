@@ -29,11 +29,14 @@ impl BitVector {
         x >>= 32 - self.len;
         Self::new(x, self.len)
     }
+
 }
 
 trait BitWriter<W: Write> {
     fn write(&mut self, buf: &BitVector) -> std::io::Result<usize>;
     fn pad_flush(&mut self) -> std::io::Result<()>;
+    fn get_ref(&self) -> &W;
+    fn get_mut(&mut self) -> &mut W;
 }
 
 pub struct LeftBitWriter<W: Write> {
@@ -49,14 +52,6 @@ impl<W: Write> LeftBitWriter<W> {
             buf: 0,
             counter: 8,
         }
-    }
-
-    pub fn get_ref(&self) -> &W {
-        self.inner.as_ref().unwrap()
-    }
-
-    pub fn get_mut(&mut self) -> &mut W {
-        self.inner.as_mut().unwrap()
     }
 }
 
@@ -102,6 +97,14 @@ impl<W: Write> BitWriter<W> for LeftBitWriter<W> {
             }
         }
         self.inner.as_mut().unwrap().flush()
+    }
+
+    fn get_ref(&self) -> &W {
+        self.inner.as_ref().unwrap()
+    }
+
+    fn get_mut(&mut self) -> &mut W {
+        self.inner.as_mut().unwrap()
     }
 }
 
