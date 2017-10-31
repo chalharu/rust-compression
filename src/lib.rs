@@ -513,78 +513,105 @@ impl<T: Clone> BucketSort for [T] {
     }
 }
 
-pub struct HuffmanEncoder<BW: BitWriter> {
-    inner: Option<BW>,
-    bit_vec_tab: Vec<Option<BitVector>>,
+pub trait HuffmanEncoder {
+    type BW;
+    fn enc<T: NumCast + Clone>(&mut self, data: &T) -> std::io::Result<usize>;
+    fn get_enc_tab(&self) -> &[Option<BitVector>];
+    fn get_ref(&self) -> &Self::BW;
+    fn get_mut(&mut self) -> &mut Self::BW;
+    fn into_inner(&mut self) -> Self::BW;
 }
 
-impl<BW: BitWriter> HuffmanEncoder<BW> {
-    pub fn new(inner: BW, symb_len: &[u8]) -> Self {
-        let symbs = symb_len
-            .into_iter()
-            .enumerate()
-            .filter(|&(_, &t)| t != 0)
-            .collect::<Vec<_>>();
-        let symbs = if symbs.len() > 0 {
-            let min_symb = symbs[0].0;
-            let max_symb = symbs.last().unwrap().0;
-            symbs
-                .bucket_sort_all(|x| *x.1)
-                .into_iter()
-                .scan((0, 0), move |c, (s, &l)| {
-                    let code = c.1 << if c.0 < l { l - c.0 } else { 0 };
-                    *c = (l, code + 1);
-                    Some((s, BitVector::new(code, l as usize)))
-                })
-                .collect::<Vec<_>>()
-                .bucket_sort(|x| x.0, min_symb, max_symb)
-                .into_iter()
-                .scan(0, move |c, (s, v)| {
-                    let r = vec![None; s - *c].into_iter().chain(vec![Some(v)]);
-                    *c = s + 1;
-                    Some(r)
-                })
-                .flat_map(move |v| v)
-                .collect::<Vec<_>>()
-        } else {
-            Vec::new()
-        };
-        HuffmanEncoder {
-            inner: Some(inner),
-            bit_vec_tab: symbs,
+macro_rules! huffman_encoder_impl {
+    ($name:ident, $is_rev:expr) => {
+        pub struct $name<BW: BitWriter> {
+            inner: Option<BW>,
+            bit_vec_tab: Vec<Option<BitVector>>,
         }
-    }
 
-    pub fn enc<T: NumCast + Clone>(&mut self, data: &T) -> std::io::Result<usize> {
-        if let Some(idx) = cast::<_, usize>(data.clone()) {
-            if idx < self.bit_vec_tab.len() {
-                if let Some(ref bv) = self.bit_vec_tab[idx] {
-                    return self.inner.as_mut().unwrap().write(bv);
+        impl<BW: BitWriter> $name<BW> {
+            pub fn new(inner: BW, symb_len: &[u8]) -> Self {
+                const IS_REV: bool = $is_rev;
+                let symbs = symb_len
+                    .into_iter()
+                    .enumerate()
+                    .filter(|&(_, &t)| t != 0)
+                    .collect::<Vec<_>>();
+                let symbs = if symbs.len() > 0 {
+                    let min_symb = symbs[0].0;
+                    let max_symb = symbs.last().unwrap().0;
+                    symbs
+                        .bucket_sort_all(|x| *x.1)
+                        .into_iter()
+                        .scan((0, 0), move |c, (s, &l)| {
+                            let code = c.1 << if c.0 < l { l - c.0 } else { 0 };
+                            *c = (l, code + 1);
+                            Some((
+                                s,
+                                if IS_REV {
+                                    BitVector::new(code, l as usize).reverse()
+                                } else {
+                                    BitVector::new(code, l as usize)
+                                },
+                            ))
+                        })
+                        .collect::<Vec<_>>()
+                        .bucket_sort(|x| x.0, min_symb, max_symb)
+                        .into_iter()
+                        .scan(0, move |c, (s, v)| {
+                            let r = vec![None; s - *c].into_iter().chain(vec![Some(v)]);
+                            *c = s + 1;
+                            Some(r)
+                        })
+                        .flat_map(move |v| v)
+                        .collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                };
+                Self {
+                    inner: Some(inner),
+                    bit_vec_tab: symbs,
                 }
             }
         }
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "out of value",
-        ))
-    }
 
-    pub fn get_enc_tab(&self) -> &[Option<BitVector>] {
-        &self.bit_vec_tab
-    }
+        impl<BW: BitWriter> HuffmanEncoder for $name<BW> {
+            type BW = BW;
+            fn enc<T: NumCast + Clone>(&mut self, data: &T) -> std::io::Result<usize> {
+                if let Some(idx) = cast::<_, usize>(data.clone()) {
+                    if idx < self.bit_vec_tab.len() {
+                        if let Some(ref bv) = self.bit_vec_tab[idx] {
+                            return self.inner.as_mut().unwrap().write(bv);
+                        }
+                    }
+                }
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "out of value",
+                ))
+            }
 
-    pub fn get_ref(&self) -> &BW {
-        self.inner.as_ref().unwrap()
-    }
+            fn get_enc_tab(&self) -> &[Option<BitVector>] {
+                &self.bit_vec_tab
+            }
 
-    pub fn get_mut(&mut self) -> &mut BW {
-        self.inner.as_mut().unwrap()
-    }
+            fn get_ref(&self) -> &Self::BW {
+                self.inner.as_ref().unwrap()
+            }
 
-    pub fn into_inner(&mut self) -> BW {
-        self.inner.take().unwrap()
+            fn get_mut(&mut self) -> &mut Self::BW {
+                self.inner.as_mut().unwrap()
+            }
+
+            fn into_inner(&mut self) -> Self::BW {
+                self.inner.take().unwrap()
+            }
+        }
     }
 }
+
+huffman_encoder_impl!(LeftHuffmanEncoder, false);
+huffman_encoder_impl!(RightHuffmanEncoder, true);
 
 /*
 pub trait HuffmanDecoder<T, BR: BitReader> {
@@ -1023,9 +1050,9 @@ mod tests {
     }
 
     #[test]
-    fn huffman_encode_new() {
-        let writer = RightBitWriter::new(Cursor::new(Vec::<u8>::new()));
-        let hencoder = HuffmanEncoder::new(writer, &vec![0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
+    fn lefthuffman_encode_new() {
+        let writer = LeftBitWriter::new(Cursor::new(Vec::<u8>::new()));
+        let hencoder = LeftHuffmanEncoder::new(writer, &vec![0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
         let tab = hencoder.get_enc_tab();
 
         assert_eq!(tab[0], None);
@@ -1041,9 +1068,9 @@ mod tests {
     }
 
     #[test]
-    fn huffman_encode_write() {
-        let writer = RightBitWriter::new(Cursor::new(Vec::<u8>::new()));
-        let mut hencoder = HuffmanEncoder::new(writer, &vec![0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
+    fn lefthuffman_encode_write() {
+        let writer = LeftBitWriter::new(Cursor::new(Vec::<u8>::new()));
+        let mut hencoder = LeftHuffmanEncoder::new(writer, &vec![0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
         for c in "abccddeeeeffffgggggggghhhhhhhh".chars().into_iter() {
             let _ = hencoder.enc(&(c as u32 - 0x60));
         }
@@ -1051,7 +1078,7 @@ mod tests {
         let mut cursor = hencoder.into_inner().into_inner().unwrap();
         cursor.set_position(0);
 
-        let mut reader = RightBitReader::new(cursor);
+        let mut reader = LeftBitReader::new(cursor);
 
         assert_eq!(reader.read(4).ok(), Some(BitVector::new(0b1100, 4)));
         assert_eq!(reader.read(4).ok(), Some(BitVector::new(0b1101, 4)));
@@ -1086,9 +1113,81 @@ mod tests {
     }
 
     #[test]
-    fn huffman_encode_new_zero() {
+    fn lefthuffman_encode_new_zero() {
+        let writer = LeftBitWriter::new(Cursor::new(Vec::<u8>::new()));
+        let hencoder = LeftHuffmanEncoder::new(writer, &vec![0_u8, 0_u8, 0_u8, 0_u8]);
+        let tab = hencoder.get_enc_tab();
+
+        assert_eq!(tab.len(), 0);
+    }
+
+    #[test]
+    fn righthuffman_encode_new() {
         let writer = RightBitWriter::new(Cursor::new(Vec::<u8>::new()));
-        let hencoder = HuffmanEncoder::new(writer, &vec![0_u8, 0_u8, 0_u8, 0_u8]);
+        let hencoder = RightHuffmanEncoder::new(writer, &vec![0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
+        let tab = hencoder.get_enc_tab();
+
+        assert_eq!(tab[0], None);
+        assert_eq!(tab[1], Some(BitVector::new(0b0011, 4)));
+        assert_eq!(tab[2], Some(BitVector::new(0b1011, 4)));
+        assert_eq!(tab[3], Some(BitVector::new(0b0111, 4)));
+        assert_eq!(tab[4], Some(BitVector::new(0b1111, 4)));
+        assert_eq!(tab[5], Some(BitVector::new(0b001, 3)));
+        assert_eq!(tab[6], Some(BitVector::new(0b101, 3)));
+        assert_eq!(tab[7], Some(BitVector::new(0b00, 2)));
+        assert_eq!(tab[8], Some(BitVector::new(0b10, 2)));
+        assert_eq!(tab.len(), 9);
+    }
+
+    #[test]
+    fn righthuffman_encode_write() {
+        let writer = RightBitWriter::new(Cursor::new(Vec::<u8>::new()));
+        let mut hencoder = RightHuffmanEncoder::new(writer, &vec![0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
+        for c in "abccddeeeeffffgggggggghhhhhhhh".chars().into_iter() {
+            let _ = hencoder.enc(&(c as u32 - 0x60));
+        }
+
+        let mut cursor = hencoder.into_inner().into_inner().unwrap();
+        cursor.set_position(0);
+
+        let mut reader = RightBitReader::new(cursor);
+
+        assert_eq!(reader.read(4).ok(), Some(BitVector::new(0b0011, 4)));
+        assert_eq!(reader.read(4).ok(), Some(BitVector::new(0b1011, 4)));
+        assert_eq!(reader.read(4).ok(), Some(BitVector::new(0b0111, 4)));
+        assert_eq!(reader.read(4).ok(), Some(BitVector::new(0b0111, 4)));
+        assert_eq!(reader.read(4).ok(), Some(BitVector::new(0b1111, 4)));
+        assert_eq!(reader.read(4).ok(), Some(BitVector::new(0b1111, 4)));
+        assert_eq!(reader.read(3).ok(), Some(BitVector::new(0b001, 3)));
+        assert_eq!(reader.read(3).ok(), Some(BitVector::new(0b001, 3)));
+        assert_eq!(reader.read(3).ok(), Some(BitVector::new(0b001, 3)));
+        assert_eq!(reader.read(3).ok(), Some(BitVector::new(0b001, 3)));
+        assert_eq!(reader.read(3).ok(), Some(BitVector::new(0b101, 3)));
+        assert_eq!(reader.read(3).ok(), Some(BitVector::new(0b101, 3)));
+        assert_eq!(reader.read(3).ok(), Some(BitVector::new(0b101, 3)));
+        assert_eq!(reader.read(3).ok(), Some(BitVector::new(0b101, 3)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b00, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b00, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b00, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b00, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b00, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b00, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b00, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b00, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b10, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b10, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b10, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b10, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b10, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b10, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b10, 2)));
+        assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b10, 2)));
+    }
+
+    #[test]
+    fn righthuffman_encode_new_zero() {
+        let writer = RightBitWriter::new(Cursor::new(Vec::<u8>::new()));
+        let hencoder = RightHuffmanEncoder::new(writer, &vec![0_u8, 0_u8, 0_u8, 0_u8]);
         let tab = hencoder.get_enc_tab();
 
         assert_eq!(tab.len(), 0);
