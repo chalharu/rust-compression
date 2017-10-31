@@ -485,17 +485,17 @@ impl<T: Clone + Add + Sub<Output = T> + NumCast, U: Clone> BucketSort for [(T, U
     type Item = (T, U);
     fn bucket_sort(&self, min: T, max: T) -> Vec<(T, U)> {
         let mut ret = self.to_vec();
-        let mut bucket = vec![0; cast::<T, usize>(max - min).unwrap() + 2];
+        let mut bucket = vec![0; cast::<T, usize>(max - min.clone()).unwrap() + 2];
 
         for i in 0..self.len() {
-            bucket[cast::<_, usize>(self[i].clone().0).unwrap() + 1] += 1;
+            bucket[cast::<T, usize>(self[i].clone().0 - min.clone()).unwrap() + 1] += 1;
         }
         for i in 2..bucket.len() {
             bucket[i] += bucket[i - 1];
         }
         for i in 0..self.len() {
             let val = self[i].clone();
-            let idx = cast::<_, usize>(val.clone().0).unwrap();
+            let idx = cast::<_, usize>(val.clone().0 - min.clone()).unwrap();
             ret[bucket[idx]] = val;
             bucket[idx] += 1;
         }
@@ -569,6 +569,15 @@ impl<BW: BitWriter> HuffmanEncoder<BW> {
         self.inner.take().unwrap()
     }
 }
+
+/*
+pub trait HuffmanDecoder<T, BR: BitReader> {
+    fn dec(&self) -> std::io::Result<T>;
+    fn get_ref(&self) -> &R;
+    fn get_mut(&mut self) -> &mut R;
+    fn into_inner(&mut self) -> Result<R, std::io::Error>;
+}
+*/
 
 #[cfg(test)]
 mod tests {
