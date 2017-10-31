@@ -469,33 +469,43 @@ impl MaxValue for u16 {
 }
 
 trait BucketSort {
-    type Key;
     type Item;
-    fn bucket_sort(&self, min: Self::Key, max: Self::Key) -> Vec<Self::Item>;
-    fn bucket_sort_all(&self) -> Vec<Self::Item>
+    fn bucket_sort<K: Clone + Add + Sub<Output = K> + NumCast, F: Fn(&Self::Item) -> K>(
+        &self,
+        key_selector: F,
+        min: K,
+        max: K,
+    ) -> Vec<Self::Item>;
+
+    fn bucket_sort_all<K, F>(&self, key_selector: F) -> Vec<Self::Item>
     where
-        Self::Key: MaxValue + MinValue,
+        K: MaxValue + MinValue + Clone + Add + Sub<Output = K> + NumCast,
+        F: Fn(&Self::Item) -> K,
     {
-        self.bucket_sort(MinValue::min_value(), MaxValue::max_value())
+        self.bucket_sort(key_selector, MinValue::min_value(), MaxValue::max_value())
     }
 }
 
-impl<T: Clone + Add + Sub<Output = T> + NumCast, U: Clone> BucketSort for [(T, U)] {
-    type Key = T;
-    type Item = (T, U);
-    fn bucket_sort(&self, min: T, max: T) -> Vec<(T, U)> {
+impl<T: Clone> BucketSort for [T] {
+    type Item = T;
+    fn bucket_sort<K: Clone + Add + Sub<Output = K> + NumCast, F: Fn(&T) -> K>(
+        &self,
+        key_selector: F,
+        min: K,
+        max: K,
+    ) -> Vec<T> {
         let mut ret = self.to_vec();
-        let mut bucket = vec![0; cast::<T, usize>(max - min.clone()).unwrap() + 2];
+        let mut bucket = vec![0; cast::<K, usize>(max - min.clone()).unwrap() + 2];
 
         for i in 0..self.len() {
-            bucket[cast::<T, usize>(self[i].clone().0 - min.clone()).unwrap() + 1] += 1;
+            bucket[cast::<_, usize>(key_selector(&self[i]) - min.clone()).unwrap() + 1] += 1;
         }
         for i in 2..bucket.len() {
             bucket[i] += bucket[i - 1];
         }
         for i in 0..self.len() {
             let val = self[i].clone();
-            let idx = cast::<_, usize>(val.clone().0 - min.clone()).unwrap();
+            let idx = cast::<_, usize>(key_selector(&val) - min.clone()).unwrap();
             ret[bucket[idx]] = val;
             bucket[idx] += 1;
         }
@@ -513,26 +523,32 @@ impl<BW: BitWriter> HuffmanEncoder<BW> {
         let symbs = symb_len
             .into_iter()
             .enumerate()
-            .filter_map(move |(i, &t)| if t != 0 { Some((t, i)) } else { None })
-            .collect::<Vec<_>>()
-            .bucket_sort_all()
-            .into_iter()
-            .scan((0, 0), move |c, (l, s)| {
-                let code = c.1 << if c.0 < l { l - c.0 } else { 0 };
-                *c = (l, code + 1);
-                Some((s, BitVector::new(code, l as usize)))
-            })
-            .collect::<Vec<_>>()
-            .bucket_sort(0, symb_len.len())
-            .into_iter()
-            .scan(0, move |c, (s, v)| {
-                let r = vec![None; s - *c].into_iter().chain(vec![Some(v)]);
-                *c = s + 1;
-                Some(r)
-            })
-            .flat_map(move |v| v)
+            .filter(|&(_, &t)| t != 0)
             .collect::<Vec<_>>();
-
+        let symbs = if symbs.len() > 0 {
+            let min_symb = symbs[0].0;
+            let max_symb = symbs.last().unwrap().0;
+            symbs
+                .bucket_sort_all(|x| *x.1)
+                .into_iter()
+                .scan((0, 0), move |c, (s, &l)| {
+                    let code = c.1 << if c.0 < l { l - c.0 } else { 0 };
+                    *c = (l, code + 1);
+                    Some((s, BitVector::new(code, l as usize)))
+                })
+                .collect::<Vec<_>>()
+                .bucket_sort(|x| x.0, min_symb, max_symb)
+                .into_iter()
+                .scan(0, move |c, (s, v)| {
+                    let r = vec![None; s - *c].into_iter().chain(vec![Some(v)]);
+                    *c = s + 1;
+                    Some(r)
+                })
+                .flat_map(move |v| v)
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
         HuffmanEncoder {
             inner: Some(inner),
             bit_vec_tab: symbs,
@@ -1067,6 +1083,15 @@ mod tests {
         assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b01, 2)));
         assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b01, 2)));
         assert_eq!(reader.read(2).ok(), Some(BitVector::new(0b01, 2)));
+    }
+
+    #[test]
+    fn huffman_encode_new_zero() {
+        let writer = RightBitWriter::new(Cursor::new(Vec::<u8>::new()));
+        let hencoder = HuffmanEncoder::new(writer, &vec![0_u8, 0_u8, 0_u8, 0_u8]);
+        let tab = hencoder.get_enc_tab();
+
+        assert_eq!(tab.len(), 0);
     }
 
 }
