@@ -6,8 +6,8 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! http://mozilla.org/MPL/2.0/ .
 
-use std::io::Write;
 use bit_vector::BitVector;
+use std::io::Write;
 
 pub trait BitWriter {
     type W: Write;
