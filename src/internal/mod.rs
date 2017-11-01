@@ -7,7 +7,7 @@
 //! http://mozilla.org/MPL/2.0/ .
 
 pub mod bucket_sort;
-pub mod canno_huff_table;
+pub mod cano_huff_table;
 
 use bucket_sort::BucketSort;
 use bit_vector::BitVector;
