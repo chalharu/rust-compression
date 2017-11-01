@@ -12,92 +12,17 @@ extern crate num_traits;
 
 use num_traits::{cast, NumCast};
 use std::collections::HashMap;
-use std::ops::{Add, Sub};
 
 mod bit_vector;
 mod bit_writer;
 mod bit_reader;
+mod internal;
 
+pub use bit_reader::*;
 pub use bit_vector::BitVector;
 pub use bit_writer::*;
-pub use bit_reader::*;
 
-trait MinValue {
-    fn min_value() -> Self;
-}
-
-trait MaxValue {
-    fn max_value() -> Self;
-}
-
-impl MinValue for u8 {
-    fn min_value() -> Self {
-        u8::min_value()
-    }
-}
-
-impl MaxValue for u8 {
-    fn max_value() -> Self {
-        u8::max_value()
-    }
-}
-
-impl MinValue for u16 {
-    fn min_value() -> Self {
-        u16::min_value()
-    }
-}
-
-impl MaxValue for u16 {
-    fn max_value() -> Self {
-        u16::max_value()
-    }
-}
-
-trait BucketSort {
-    type Item;
-    fn bucket_sort<K: Clone + Add + Sub<Output = K> + NumCast, F: Fn(&Self::Item) -> K>(
-        &self,
-        key_selector: F,
-        min: K,
-        max: K,
-    ) -> Vec<Self::Item>;
-
-    fn bucket_sort_all<K, F>(&self, key_selector: F) -> Vec<Self::Item>
-    where
-        K: MaxValue + MinValue + Clone + Add + Sub<Output = K> + NumCast,
-        F: Fn(&Self::Item) -> K,
-    {
-        self.bucket_sort(key_selector, MinValue::min_value(), MaxValue::max_value())
-    }
-}
-
-impl<T: Clone> BucketSort for [T] {
-    type Item = T;
-    fn bucket_sort<K: Clone + Add + Sub<Output = K> + NumCast, F: Fn(&T) -> K>(
-        &self,
-        key_selector: F,
-        min: K,
-        max: K,
-    ) -> Vec<T> {
-        let mut ret = self.to_vec();
-        let mut bucket = vec![0; cast::<K, usize>(max - min.clone()).unwrap() + 2];
-
-        for i in 0..self.len() {
-            bucket[cast::<_, usize>(key_selector(&self[i]) - min.clone()).unwrap() + 1] += 1;
-        }
-        for i in 2..bucket.len() {
-            bucket[i] += bucket[i - 1];
-        }
-        for i in 0..self.len() {
-            let val = self[i].clone();
-            let idx = cast::<_, usize>(key_selector(&val) - min.clone()).unwrap();
-            ret[bucket[idx]] = val;
-            bucket[idx] += 1;
-        }
-        ret
-    }
-}
+use internal::*;
 
 fn creat_huffman_table(symb_len: &[u8], is_reverse: bool) -> Vec<Option<BitVector>> {
     let symbs = symb_len
@@ -109,7 +34,7 @@ fn creat_huffman_table(symb_len: &[u8], is_reverse: bool) -> Vec<Option<BitVecto
         let min_symb = symbs[0].0;
         let max_symb = symbs.last().unwrap().0;
         symbs
-            .bucket_sort_all(|x| *x.1)
+            .bucket_sort_all_by_key(|x| *x.1)
             .into_iter()
             .scan((0, 0), move |c, (s, &l)| {
                 let code = c.1 << if c.0 < l { l - c.0 } else { 0 };
@@ -124,7 +49,7 @@ fn creat_huffman_table(symb_len: &[u8], is_reverse: bool) -> Vec<Option<BitVecto
                 ))
             })
             .collect::<Vec<_>>()
-            .bucket_sort(|x| x.0, min_symb, max_symb)
+            .bucket_sort_by_key(|x| x.0, min_symb, max_symb)
             .into_iter()
             .scan(0, move |c, (s, v)| {
                 let r = vec![None; s - *c].into_iter().chain(vec![Some(v)]);
