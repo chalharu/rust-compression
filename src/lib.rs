@@ -10,7 +10,6 @@
 extern crate num_iter;
 extern crate num_traits;
 
-
 use num_traits::{cast, NumCast};
 use std::cmp::min;
 
@@ -19,27 +18,8 @@ use std::io::{Read, Write};
 
 use std::ops::{Add, Sub};
 
-#[derive(Copy, PartialEq, Eq, Clone, Debug, Hash)]
-pub struct BitVector {
-    data: u32,
-    len: usize,
-}
-
-impl BitVector {
-    pub fn new(data: u32, len: usize) -> Self {
-        BitVector { data, len }
-    }
-
-    pub fn reverse(&self) -> Self {
-        let mut x = self.data;
-        x = (x & 0x55555555) << 1 | (x & 0xAAAAAAAA) >> 1;
-        x = (x & 0x33333333) << 2 | (x & 0xCCCCCCCC) >> 2;
-        x = (x & 0x0F0F0F0F) << 4 | (x & 0xF0F0F0F0) >> 4;
-        x = x << 24 | (x & 0xFF00) << 8 | (x & 0xFF0000) >> 8 | x >> 24;
-        x >>= 32 - self.len;
-        Self::new(x, self.len)
-    }
-}
+mod bit_vector;
+pub use bit_vector::BitVector;
 
 pub trait BitWriter {
     type W: Write;
@@ -70,11 +50,11 @@ impl<W: Write> BitWriter for LeftBitWriter<W> {
     type W = W;
     fn write(&mut self, data: &BitVector) -> std::io::Result<usize> {
         const BIT_LEN: usize = 32 /* u32 */;
-        if data.len == 0 {
+        if data.len() == 0 {
             return Ok(0);
         }
-        let mut len = data.len;
-        let mut data = data.data << (BIT_LEN - len);
+        let mut len = data.len();
+        let mut data = data.data() << (BIT_LEN - len);
         let mut r = 0;
         while len >= self.counter {
             let result = self.inner
@@ -159,8 +139,8 @@ impl<W: Write> BitWriter for RightBitWriter<W> {
     type W = W;
     fn write(&mut self, data: &BitVector) -> std::io::Result<usize> {
         const BIT_LEN: usize = 8 /* u8 */;
-        let mut len = data.len;
-        let mut data = data.data;
+        let mut len = data.len();
+        let mut data = data.data();
         let mut r = 0;
         while len >= self.counter {
             let result = self.inner
@@ -257,8 +237,8 @@ impl<R: Read> BitReader for LeftBitReader<R> {
     fn read(&mut self, len: usize) -> std::io::Result<BitVector> {
         let r = self.peek(len);
         if let Ok(l) = r {
-            self.buf <<= l.len;
-            self.counter -= l.len;
+            self.buf <<= l.len();
+            self.counter -= l.len();
         }
         r
     }
@@ -358,8 +338,8 @@ impl<R: Read> BitReader for RightBitReader<R> {
     fn read(&mut self, len: usize) -> std::io::Result<BitVector> {
         let r = self.peek(len);
         if let Ok(l) = r {
-            self.buf >>= l.len;
-            self.counter -= l.len;
+            self.buf >>= l.len();
+            self.counter -= l.len();
         }
         r
     }
@@ -649,17 +629,17 @@ macro_rules! huffman_decoder_impl {
                 for (i, h) in huff_tab.into_iter().enumerate() {
                     if let Some(b) = h {
                         let val = cast::<_, T>(i).unwrap();
-                        if stab_bits >= b.len {
-                            let ld = stab_bits - b.len;
+                        if stab_bits >= b.len() {
+                            let ld = stab_bits - b.len();
                             let head =
-                                if !IS_REV { b.data << ld } else { b.data };
+                                if !IS_REV { b.data() << ld } else { b.data() };
                             for j in 0..(1 << ld) {
                                 if !IS_REV {
                                     stab[(head | j) as usize] =
-                                        Some((val.clone(), b.len as u8));
+                                        Some((val.clone(), b.len() as u8));
                                 } else {
-                                    stab[(head | (j << b.len)) as usize] =
-                                        Some((val.clone(), b.len as u8));
+                                    stab[(head | (j << b.len())) as usize] =
+                                        Some((val.clone(), b.len() as u8));
                                 }
                             }
                         } else {
@@ -685,9 +665,9 @@ macro_rules! huffman_decoder_impl {
                 match self.inner.as_mut().unwrap().peek(self.stab_bits) {
                     Ok(c) => {
                         let c = if !$is_rev {
-                            (c.data << (self.stab_bits - c.len))
+                            (c.data() << (self.stab_bits - c.len()))
                         } else {
-                            c.data
+                            c.data()
                         } as usize;
                         if let &Some(ref v) = &self.stab[c] {
                             let _ =
@@ -702,24 +682,24 @@ macro_rules! huffman_decoder_impl {
                                     .unwrap()
                                     .peek(l)
                                 {
-                                    if b.len == l {
+                                    if b.len() == l {
                                         if let Some(v) = self.long_map.get(&b) {
                                             let _ = self.inner
                                                 .as_mut()
                                                 .unwrap()
-                                                .skip(b.len);
+                                                .skip(b.len());
                                             return Ok(v.clone());
                                         }
                                     } else {
-                                        while b.len < 32 {
+                                        while b.len() < 32 {
                                             l += 1;
                                             b = BitVector::new(
                                                 if !$is_rev {
-                                                    b.data << 1
+                                                    b.data() << 1
                                                 } else {
-                                                    b.data
+                                                    b.data()
                                                 },
-                                                b.len + 1,
+                                                b.len() + 1,
                                             );
                                             if let Some(v) = self.long_map
                                                 .get(&b)
@@ -727,7 +707,7 @@ macro_rules! huffman_decoder_impl {
                                                 let _ = self.inner
                                                     .as_mut()
                                                     .unwrap()
-                                                    .skip(b.len);
+                                                    .skip(b.len());
                                                 return Ok(v.clone());
                                             }
                                         }
@@ -902,7 +882,7 @@ pub mod canno_huff_table {
             .zip(map)
             .map(|(&x, i)| (x as u8, i))
             .collect::<Vec<_>>();
-        r.sort_by_key(|v| v.1);
+        r.sort_unstable_by_key(|v| v.1);
         r.into_iter().map(move |v| v.0).collect::<Vec<_>>()
     }
 
@@ -982,14 +962,6 @@ pub mod canno_huff_table {
 mod tests {
     use super::*;
     use std::io::Cursor;
-
-    #[test]
-    fn bitvector_reverse() {
-        assert_eq!(
-            BitVector::new(0xC71F, 17).reverse(),
-            BitVector::new(0x1F1C6, 17)
-        );
-    }
 
     #[test]
     fn leftbitwriter_write() {
