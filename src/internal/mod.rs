@@ -6,8 +6,10 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! http://mozilla.org/MPL/2.0/ .
 
-mod bucket_sort;
-pub use self::bucket_sort::*;
+pub mod bucket_sort;
+pub mod canno_huff_table;
+
+use bucket_sort::BucketSort;
 use bit_vector::BitVector;
 
 pub trait MinValue {
