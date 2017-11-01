@@ -812,19 +812,26 @@ pub mod canno_huff_table {
         cur[i] += 1;
     }
 
+    /// Reverse package merge
     fn gen_code_lm<F: Fn(usize, usize) -> usize>(
-        sfreq: &[usize],
+        freq: &[usize],
         lim: usize,
         weight_add_fn: F,
     ) -> Vec<u8> {
-        // let sfreq = freq.iter().map(|f| *f).rev().collect::<Vec<_>>();
+        let len = freq.len();
+        let mut freqmap = freq.iter()
+            .enumerate()
+            .map(|(i, &f)| (i, f))
+            .collect::<Vec<_>>();
+        freqmap.sort_by(|x, y| y.1.cmp(&x.1));
+        let (map, sfreq): (Vec<_>, Vec<_>) = freqmap.into_iter().unzip();
 
         let mut max_elem = vec![0; lim];
         let mut b = vec![0; lim];
 
-        let mut excess = (1 << lim) - sfreq.len();
+        let mut excess = (1 << lim) - len;
         let half = 1 << (lim - 1);
-        max_elem[lim - 1] = sfreq.len();
+        max_elem[lim - 1] = len;
 
         for j in 0..lim {
             if excess >= half {
@@ -833,7 +840,7 @@ pub mod canno_huff_table {
             }
             excess <<= 1;
             if lim >= 2 + j {
-                max_elem[lim - 2 - j] = max_elem[lim - 1 - j] / 2 + sfreq.len();
+                max_elem[lim - 2 - j] = max_elem[lim - 1 - j] / 2 + len;
             }
         }
 
@@ -846,7 +853,7 @@ pub mod canno_huff_table {
 
         let mut val = (0..lim).map(|i| vec![0; max_elem[i]]).collect::<Vec<_>>();
         let mut ty = (0..lim).map(|i| vec![0; max_elem[i]]).collect::<Vec<_>>();
-        let mut c = vec![lim; sfreq.len()];
+        let mut c = vec![lim; len];
 
         for t in 0..max_elem[lim - 1] {
             val[lim - 1][t] = sfreq[t];
@@ -872,13 +879,13 @@ pub mod canno_huff_table {
                 };
                 if weight > sfreq[i] {
                     val[j - 1][t] = weight;
-                    ty[j - 1][t] = sfreq.len();
+                    ty[j - 1][t] = len;
                     next += 2;
                 } else {
                     val[j - 1][t] = sfreq[i];
                     ty[j - 1][t] = i;
                     i += 1;
-                    if i >= sfreq.len() {
+                    if i >= len {
                         break;
                     }
                 }
@@ -891,8 +898,12 @@ pub mod canno_huff_table {
             }
         }
 
-        c.iter().map(|&x| x as u8).collect::<Vec<_>>()
-        // c.iter().rev().map(|&x| x as u8).collect::<Vec<_>>()
+        let mut r = c.iter()
+            .zip(map)
+            .map(|(&x, i)| (x as u8, i))
+            .collect::<Vec<_>>();
+        r.sort_by_key(|v| v.1);
+        r.into_iter().map(move |v| v.0).collect::<Vec<_>>()
     }
 
     fn gen_code<F: Fn(usize, usize) -> usize>(
