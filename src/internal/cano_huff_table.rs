@@ -1,4 +1,3 @@
-
 //! rust-compression
 //!
 //! # Licensing
@@ -34,7 +33,12 @@ fn create_heap(buf: &mut Vec<usize>) {
     }
 }
 
-fn take_package(ty: &mut Vec<Vec<usize>>, len: &mut Vec<usize>, cur: &mut Vec<usize>, i: usize) {
+fn take_package(
+    ty: &mut Vec<Vec<usize>>,
+    len: &mut Vec<usize>,
+    cur: &mut Vec<usize>,
+    i: usize,
+) {
     let x = ty[i][cur[i]];
     if x == len.len() {
         take_package(ty, len, cur, i + 1);
@@ -140,7 +144,11 @@ fn gen_code_lm<F: Fn(usize, usize) -> usize>(
     r.into_iter().map(move |v| v.0).collect::<Vec<_>>()
 }
 
-fn gen_code<F: Fn(usize, usize) -> usize>(freq: &[usize], lim: usize, weight_add_fn: F) -> Vec<u8> {
+fn gen_code<F: Fn(usize, usize) -> usize>(
+    freq: &[usize],
+    lim: usize,
+    weight_add_fn: F,
+) -> Vec<u8> {
     let mut buf = (freq.len()..(freq.len() << 1))
         .chain(freq.iter().cloned())
         .collect();

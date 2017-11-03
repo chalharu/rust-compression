@@ -1,4 +1,3 @@
-
 //! rust-compression
 //!
 //! # Licensing
@@ -8,9 +7,10 @@
 
 pub mod bucket_sort;
 pub mod cano_huff_table;
+pub mod circular_buffer;
 
-use bucket_sort::BucketSort;
 use bit_vector::BitVector;
+use bucket_sort::BucketSort;
 
 pub trait MinValue {
     fn min_value() -> Self;
@@ -44,7 +44,10 @@ impl MaxValue for u16 {
     }
 }
 
-pub fn creat_huffman_table(symb_len: &[u8], is_reverse: bool) -> Vec<Option<BitVector>> {
+pub fn creat_huffman_table(
+    symb_len: &[u8],
+    is_reverse: bool,
+) -> Vec<Option<BitVector>> {
     let symbs = symb_len
         .into_iter()
         .enumerate()

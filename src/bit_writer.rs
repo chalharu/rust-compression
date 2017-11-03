@@ -1,4 +1,3 @@
-
 //! rust-compression
 //!
 //! # Licensing
@@ -45,10 +44,9 @@ impl<W: Write> BitWriter for LeftBitWriter<W> {
         let mut data = data.data() << (BIT_LEN - len);
         let mut r = 0;
         while len >= self.counter {
-            let result = self.inner
-                .as_mut()
-                .unwrap()
-                .write(&[self.buf | (data >> (BIT_LEN - self.counter)) as u8; 1]);
+            let result = self.inner.as_mut().unwrap().write(
+                &[self.buf | (data >> (BIT_LEN - self.counter)) as u8; 1],
+            );
             if let Ok(l) = result {
                 if l == 0 {
                     return Err(::std::io::Error::new(
@@ -131,10 +129,9 @@ impl<W: Write> BitWriter for RightBitWriter<W> {
         let mut data = data.data();
         let mut r = 0;
         while len >= self.counter {
-            let result = self.inner
-                .as_mut()
-                .unwrap()
-                .write(&[self.buf | (data << (BIT_LEN - self.counter)) as u8; 1]);
+            let result = self.inner.as_mut().unwrap().write(
+                &[self.buf | (data << (BIT_LEN - self.counter)) as u8; 1],
+            );
             if let Ok(l) = result {
                 if l == 0 {
                     return Err(::std::io::Error::new(
