@@ -3,7 +3,7 @@
 //! # Licensing
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
-//! http://mozilla.org/MPL/2.0/ .
+//! <http://mozilla.org/MPL/2.0/>.
 
 use std::ops::{Index, IndexMut};
 use std::ptr;
@@ -64,12 +64,12 @@ impl<T: Default + Clone> CircularBuffer<T> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_raw_pos(&self) -> usize {
         self.pos
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_raw_ref(&self) -> &[T] {
         self.data.as_ref()
     }

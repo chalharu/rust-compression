@@ -3,7 +3,7 @@
 //! # Licensing
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
-//! http://mozilla.org/MPL/2.0/ .
+//! <http://mozilla.org/MPL/2.0/>.
 
 use bit_vector::BitVector;
 use std::cmp::min;
@@ -59,7 +59,7 @@ impl<R: Read> BitReader for LeftBitReader<R> {
             let mut buf = [0_u8; 1];
             if let Ok(rlen) = self.inner.as_mut().unwrap().read(&mut buf) {
                 if rlen != 0 {
-                    self.buf |= (buf[0] as u32) << ls_count;
+                    self.buf |= u32::from(buf[0]) << ls_count;
                     self.counter += 8 /* u8 */;
                     continue;
                 }
@@ -83,7 +83,7 @@ impl<R: Read> BitReader for LeftBitReader<R> {
             let mut buf = [0_u8; 1];
             if let Ok(rlen) = self.inner.as_mut().unwrap().read(&mut buf) {
                 if rlen != 0 {
-                    self.buf = (buf[0] as u32) << (32 /* u32 */ - 8 /* u8 */);
+                    self.buf = u32::from(buf[0]) << (32 /* u32 */ - 8 /* u8 */);
                     self.counter = 8 /* u8 */;
                     continue;
                 }
@@ -159,7 +159,7 @@ impl<R: Read> BitReader for RightBitReader<R> {
             let mut buf = [0_u8; 1];
             if let Ok(rlen) = self.inner.as_mut().unwrap().read(&mut buf) {
                 if rlen != 0 {
-                    self.buf |= (buf[0] as u32) << self.counter;
+                    self.buf |= u32::from(buf[0]) << self.counter;
                     self.counter += 8 /* u8 */;
                     continue;
                 }
@@ -183,7 +183,7 @@ impl<R: Read> BitReader for RightBitReader<R> {
             let mut buf = [0_u8; 1];
             if let Ok(rlen) = self.inner.as_mut().unwrap().read(&mut buf) {
                 if rlen != 0 {
-                    self.buf = buf[0] as u32;
+                    self.buf = u32::from(buf[0]);
                     self.counter = 8 /* u8 */;
                     continue;
                 }

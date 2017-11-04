@@ -3,7 +3,7 @@
 //! # Licensing
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
-//! http://mozilla.org/MPL/2.0/ .
+//! <http://mozilla.org/MPL/2.0/>.
 
 pub mod bucket_sort;
 pub mod cano_huff_table;
@@ -53,7 +53,7 @@ pub fn creat_huffman_table(
         .enumerate()
         .filter(|&(_, &t)| t != 0)
         .collect::<Vec<_>>();
-    if symbs.len() > 0 {
+    if !symbs.is_empty() {
         let min_symb = symbs[0].0;
         let max_symb = symbs.last().unwrap().0;
         symbs

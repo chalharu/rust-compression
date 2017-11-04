@@ -3,7 +3,7 @@
 //! # Licensing
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
-//! http://mozilla.org/MPL/2.0/ .
+//! <http://mozilla.org/MPL/2.0/>.
 
 use bit_vector::BitVector;
 use std::io::Write;
@@ -37,7 +37,7 @@ impl<W: Write> BitWriter for LeftBitWriter<W> {
     type W = W;
     fn write(&mut self, data: &BitVector) -> ::std::io::Result<usize> {
         const BIT_LEN: usize = 32 /* u32 */;
-        if data.len() == 0 {
+        if data.is_empty() {
             return Ok(0);
         }
         let mut len = data.len();

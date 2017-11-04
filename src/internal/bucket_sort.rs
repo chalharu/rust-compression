@@ -3,7 +3,7 @@
 //! # Licensing
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
-//! http://mozilla.org/MPL/2.0/ .
+//! <http://mozilla.org/MPL/2.0/>.
 
 use {MaxValue, MinValue};
 use num_traits::{cast, NumCast};
@@ -57,8 +57,8 @@ impl<T: Clone> BucketSort for [T] {
         for i in 2..bucket.len() {
             bucket[i] += bucket[i - 1];
         }
-        for i in 0..self.len() {
-            let val = self[i].clone();
+        for i in self {
+            let val = i.clone();
             let idx =
                 cast::<_, usize>(key_selector(&val) - min.clone()).unwrap();
             ret[bucket[idx]] = val;

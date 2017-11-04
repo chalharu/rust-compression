@@ -3,7 +3,7 @@
 //! # Licensing
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
-//! http://mozilla.org/MPL/2.0/ .
+//! <http://mozilla.org/MPL/2.0/>.
 
 fn down_heap(buf: &mut Vec<usize>, mut n: usize, len: usize) {
     let tmp = buf[n];
@@ -93,8 +93,8 @@ fn gen_code_lm<F: Fn(usize, usize) -> usize>(
     let mut ty = (0..lim).map(|i| vec![0; max_elem[i]]).collect::<Vec<_>>();
     let mut c = vec![lim; len];
 
-    for t in 0..max_elem[lim - 1] {
-        val[lim - 1][t] = sfreq[t];
+    for (t, &s) in sfreq.iter().enumerate().take(max_elem[lim - 1]) {
+        val[lim - 1][t] = s;
         ty[lim - 1][t] = t;
     }
 
@@ -192,7 +192,7 @@ pub fn make_tab_with_fn<F: Fn(usize, usize) -> usize>(
     lim: usize,
     weight_add_fn: F,
 ) -> Vec<u8> {
-    if freq.len() == 0 {
+    if freq.is_empty() {
         Vec::new()
     } else {
         let (s, l): (Vec<_>, Vec<_>) = freq.into_iter()

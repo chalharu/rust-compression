@@ -3,7 +3,7 @@
 //! # Licensing
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
-//! http://mozilla.org/MPL/2.0/ .
+//! <http://mozilla.org/MPL/2.0/>.
 
 #[derive(Copy, PartialEq, Eq, Clone, Debug, Hash)]
 pub struct BitVector {
@@ -18,22 +18,27 @@ impl BitVector {
 
     pub fn reverse(&self) -> Self {
         let mut x = self.data;
-        x = (x & 0x55555555) << 1 | (x & 0xAAAAAAAA) >> 1;
-        x = (x & 0x33333333) << 2 | (x & 0xCCCCCCCC) >> 2;
-        x = (x & 0x0F0F0F0F) << 4 | (x & 0xF0F0F0F0) >> 4;
-        x = x << 24 | (x & 0xFF00) << 8 | (x & 0xFF0000) >> 8 | x >> 24;
+        x = (x & 0x5555_5555) << 1 | (x & 0xAAAA_AAAA) >> 1;
+        x = (x & 0x3333_3333) << 2 | (x & 0xCCCC_CCCC) >> 2;
+        x = (x & 0x0F0F_0F0F) << 4 | (x & 0xF0F0_F0F0) >> 4;
+        x = x << 24 | (x & 0xFF00) << 8 | (x & 0x00FF_0000) >> 8 | x >> 24;
         x >>= 32 - self.len;
         Self::new(x, self.len)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn data(&self) -> u32 {
         self.data
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }
 
