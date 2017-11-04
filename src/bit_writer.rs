@@ -201,7 +201,7 @@ mod tests {
         let _ = writer.write(&BitVector::new(0b10, 2));
         let _ = writer.write(&BitVector::new(0b011, 3));
         let _ = writer.write(&BitVector::new(0b00, 2));
-        assert_eq!(writer.get_ref()[0], 0b11001100);
+        assert_eq!(writer.get_ref()[0], 0b1100_1100);
         assert_eq!(writer.get_ref().len(), 1);
     }
 
@@ -262,7 +262,7 @@ mod tests {
         let _ = writer.write(&BitVector::new(0b10, 2));
         let _ = writer.write(&BitVector::new(0b011, 3));
         let _ = writer.write(&BitVector::new(0b00, 2));
-        assert_eq!(writer.get_ref()[0], 0b00011101);
+        assert_eq!(writer.get_ref()[0], 0b0001_1101);
         assert_eq!(writer.get_ref().len(), 1);
     }
 
@@ -287,7 +287,7 @@ mod tests {
         let _ = writer.write(&BitVector::new(3, 3));
         assert_eq!(writer.get_ref().len(), 0);
         let _ = writer.pad_flush();
-        assert_eq!(writer.get_ref()[0], 0b00011101);
+        assert_eq!(writer.get_ref()[0], 0b0001_1101);
         assert_eq!(writer.get_ref().len(), 1);
     }
 

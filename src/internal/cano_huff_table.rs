@@ -241,7 +241,7 @@ mod tests {
         let tab = make_tab_with_fn(
             &freq.iter().map(|i| i << 8).collect::<Vec<_>>(),
             12,
-            |x, y| (x & !0xFF) + (y & !0xFF) | max(x & 0xFF, y & 0xFF) + 1,
+            |x, y| ((x & !0xFF) + (y & !0xFF)) | (max(x & 0xFF, y & 0xFF) + 1),
         );
 
         assert_eq!(tab, symb_len);
@@ -253,7 +253,7 @@ mod tests {
         let tab = make_tab_with_fn(
             &freq.iter().map(|i| i << 8).collect::<Vec<_>>(),
             8,
-            |x, y| (x & !0xFF) + (y & !0xFF) | max(x & 0xFF, y & 0xFF) + 1,
+            |x, y| ((x & !0xFF) + (y & !0xFF)) | (max(x & 0xFF, y & 0xFF) + 1),
         );
 
         assert!(

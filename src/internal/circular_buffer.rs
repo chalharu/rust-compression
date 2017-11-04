@@ -110,19 +110,19 @@ mod tests {
     #[test]
     fn add() {
         let mut buf = CircularBuffer::new(16);
-        for d in (0..17).into_iter() {
+        for d in 0..17 {
             buf.push(d);
         }
 
-        for d in (0..16).into_iter() {
+        for d in 0..16 {
             assert_eq!(buf[d], 16 - d);
         }
 
-        for d in (17..21).into_iter() {
+        for d in 17..21 {
             buf.push(d);
         }
 
-        for d in (0..16).into_iter() {
+        for d in 0..16 {
             assert_eq!(buf[d], 20 - d);
         }
     }
@@ -132,19 +132,19 @@ mod tests {
         let mut buf = CircularBuffer::new(16);
         buf.append(&(1..17).collect::<Vec<_>>());
 
-        for d in (0..16).into_iter() {
+        for d in 0..16 {
             assert_eq!(buf[d], 16 - d);
         }
 
         buf.append(&(17..21).collect::<Vec<_>>());
 
-        for d in (0..16).into_iter() {
+        for d in 0..16 {
             assert_eq!(buf[d], 20 - d);
         }
 
         buf.append(&(1..17).collect::<Vec<_>>());
 
-        for d in (0..16).into_iter() {
+        for d in 0..16 {
             assert_eq!(buf[d], 16 - d);
         }
     }

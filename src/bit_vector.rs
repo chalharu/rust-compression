@@ -51,7 +51,7 @@ mod tests {
     fn bitvector_reverse() {
         assert_eq!(
             BitVector::new(0xC71F, 17).reverse(),
-            BitVector::new(0x1F1C6, 17)
+            BitVector::new(0x0001_F1C6, 17)
         );
     }
 }
