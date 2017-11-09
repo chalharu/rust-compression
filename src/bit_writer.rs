@@ -6,10 +6,10 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use bit_vector::BitVector;
-use std::io::Write;
+use std::io::Write as ioWrite;
 
 pub trait BitWriter {
-    type W: Write;
+    type W: ioWrite;
     fn write(&mut self, buf: &BitVector) -> ::std::io::Result<usize>;
     fn pad_flush(&mut self) -> ::std::io::Result<()>;
     fn get_ref(&self) -> &Self::W;
@@ -17,13 +17,13 @@ pub trait BitWriter {
     fn into_inner(&mut self) -> Result<Self::W, ::std::io::Error>;
 }
 
-pub struct LeftBitWriter<W: Write> {
+pub struct LeftBitWriter<W: ioWrite> {
     inner: Option<W>,
     buf: u8,
     counter: usize,
 }
 
-impl<W: Write> LeftBitWriter<W> {
+impl<W: ioWrite> LeftBitWriter<W> {
     pub fn new(inner: W) -> Self {
         LeftBitWriter {
             inner: Some(inner),
@@ -33,7 +33,7 @@ impl<W: Write> LeftBitWriter<W> {
     }
 }
 
-impl<W: Write> BitWriter for LeftBitWriter<W> {
+impl<W: ioWrite> BitWriter for LeftBitWriter<W> {
     type W = W;
     fn write(&mut self, data: &BitVector) -> ::std::io::Result<usize> {
         const BIT_LEN: usize = 32 /* u32 */;
@@ -96,7 +96,7 @@ impl<W: Write> BitWriter for LeftBitWriter<W> {
     }
 }
 
-impl<W: Write> Drop for LeftBitWriter<W> {
+impl<W: ioWrite> Drop for LeftBitWriter<W> {
     fn drop(&mut self) {
         if self.inner.is_some() {
             // dtors should not panic, so we ignore a failed flush
@@ -105,13 +105,13 @@ impl<W: Write> Drop for LeftBitWriter<W> {
     }
 }
 
-pub struct RightBitWriter<W: Write> {
+pub struct RightBitWriter<W: ioWrite> {
     inner: Option<W>,
     buf: u8,
     counter: usize,
 }
 
-impl<W: Write> RightBitWriter<W> {
+impl<W: ioWrite> RightBitWriter<W> {
     pub fn new(inner: W) -> Self {
         RightBitWriter {
             inner: Some(inner),
@@ -121,7 +121,7 @@ impl<W: Write> RightBitWriter<W> {
     }
 }
 
-impl<W: Write> BitWriter for RightBitWriter<W> {
+impl<W: ioWrite> BitWriter for RightBitWriter<W> {
     type W = W;
     fn write(&mut self, data: &BitVector) -> ::std::io::Result<usize> {
         const BIT_LEN: usize = 8 /* u8 */;
@@ -181,7 +181,7 @@ impl<W: Write> BitWriter for RightBitWriter<W> {
     }
 }
 
-impl<W: Write> Drop for RightBitWriter<W> {
+impl<W: ioWrite> Drop for RightBitWriter<W> {
     fn drop(&mut self) {
         if self.inner.is_some() {
             // dtors should not panic, so we ignore a failed flush

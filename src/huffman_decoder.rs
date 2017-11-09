@@ -5,11 +5,11 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use bit_vector::BitVector;
 use bit_reader::BitReader;
-use num_traits::{cast, NumCast};
-use std::collections::HashMap;
+use bit_vector::BitVector;
 use internal;
+use num_traits::{NumCast, cast};
+use std::collections::HashMap;
 
 pub trait HuffmanDecoder {
     type BR: BitReader;
@@ -159,10 +159,10 @@ huffman_decoder_impl!(RightHuffmanDecoder, true);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
-    use bit_writer::*;
     use bit_reader::*;
+    use bit_writer::*;
     use huffman_encoder::*;
+    use std::io::Cursor;
 
     #[test]
     fn lefthuffman_decode() {
@@ -178,7 +178,8 @@ mod tests {
         cursor.set_position(0);
 
         let reader = LeftBitReader::new(cursor);
-        let mut hdecoder = LeftHuffmanDecoder::<_, u8>::new(reader, &symb_len, 12);
+        let mut hdecoder =
+            LeftHuffmanDecoder::<_, u8>::new(reader, &symb_len, 12);
 
         let mut ac = Vec::<u8>::new();
         while let Ok(c) = hdecoder.dec() {
@@ -203,7 +204,8 @@ mod tests {
         cursor.set_position(0);
 
         let reader = LeftBitReader::new(cursor);
-        let mut hdecoder = LeftHuffmanDecoder::<_, u8>::new(reader, &symb_len, 2);
+        let mut hdecoder =
+            LeftHuffmanDecoder::<_, u8>::new(reader, &symb_len, 2);
 
         let mut ac = Vec::<u8>::new();
         while let Ok(c) = hdecoder.dec() {
@@ -227,7 +229,8 @@ mod tests {
         cursor.set_position(0);
 
         let reader = RightBitReader::new(cursor);
-        let mut hdecoder = RightHuffmanDecoder::<_, u8>::new(reader, &symb_len, 4);
+        let mut hdecoder =
+            RightHuffmanDecoder::<_, u8>::new(reader, &symb_len, 4);
 
         let mut ac = Vec::<u8>::new();
         while let Ok(c) = hdecoder.dec() {
@@ -252,7 +255,8 @@ mod tests {
         cursor.set_position(0);
 
         let reader = RightBitReader::new(cursor);
-        let mut hdecoder = RightHuffmanDecoder::<_, u8>::new(reader, &symb_len, 2);
+        let mut hdecoder =
+            RightHuffmanDecoder::<_, u8>::new(reader, &symb_len, 2);
 
         let mut ac = Vec::<u8>::new();
         while let Ok(c) = hdecoder.dec() {

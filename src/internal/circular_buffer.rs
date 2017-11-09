@@ -9,10 +9,11 @@ use std::ops::{Index, IndexMut};
 use std::ptr;
 use std::usize;
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct CircularBuffer<T> {
     data: Vec<T>, // want to use RawVec but that is unstable
     pos: usize,
+    is_first: bool,
 }
 
 impl<T: Default + Clone> CircularBuffer<T> {
@@ -20,6 +21,16 @@ impl<T: Default + Clone> CircularBuffer<T> {
         Self {
             data: vec![T::default(); cap],
             pos: 0,
+            is_first: true,
+        }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        if self.is_first {
+            self.pos
+        } else {
+            self.data.len()
         }
     }
 
@@ -28,6 +39,7 @@ impl<T: Default + Clone> CircularBuffer<T> {
         self.pos += 1;
         if self.pos >= self.data.len() {
             self.pos = 0;
+            self.is_first = false;
         }
     }
 
@@ -46,6 +58,7 @@ impl<T: Default + Clone> CircularBuffer<T> {
                 self.pos = if len != data.len() {
                     self.pos + data.len()
                 } else {
+                    self.is_first = false;
                     0
                 };
             } else {
@@ -60,6 +73,7 @@ impl<T: Default + Clone> CircularBuffer<T> {
                     count - len,
                 );
                 self.pos = data.len() - len;
+                self.is_first = false;
             }
         }
     }

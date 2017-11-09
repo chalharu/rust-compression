@@ -7,12 +7,13 @@
 
 use bit_vector::BitVector;
 use bit_writer::BitWriter;
-use num_traits::{cast, NumCast};
 use internal;
+use num_traits::{NumCast, cast};
 
 pub trait HuffmanEncoder {
     type BW: BitWriter;
-    fn enc<T: NumCast + Clone>(&mut self, data: &T) -> ::std::io::Result<usize>;
+    fn enc<T: NumCast + Clone>(&mut self, data: &T)
+        -> ::std::io::Result<usize>;
     fn get_enc_tab(&self) -> &[Option<BitVector>];
     fn get_ref(&self) -> &Self::BW;
     fn get_mut(&mut self) -> &mut Self::BW;
@@ -81,14 +82,15 @@ huffman_encoder_impl!(RightHuffmanEncoder, true);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
-    use bit_writer::*;
     use bit_reader::*;
+    use bit_writer::*;
+    use std::io::Cursor;
 
     #[test]
     fn lefthuffman_encode_new() {
         let writer = LeftBitWriter::new(Cursor::new(Vec::<u8>::new()));
-        let hencoder = LeftHuffmanEncoder::new(writer, &[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
+        let hencoder =
+            LeftHuffmanEncoder::new(writer, &[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
         let tab = hencoder.get_enc_tab();
 
         assert_eq!(tab[0], None);
@@ -106,7 +108,8 @@ mod tests {
     #[test]
     fn lefthuffman_encode_write() {
         let writer = LeftBitWriter::new(Cursor::new(Vec::<u8>::new()));
-        let mut hencoder = LeftHuffmanEncoder::new(writer, &[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
+        let mut hencoder =
+            LeftHuffmanEncoder::new(writer, &[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
         for c in "abccddeeeeffffgggggggghhhhhhhh".bytes() {
             let _ = hencoder.enc(&(c - 0x60));
         }
@@ -151,7 +154,8 @@ mod tests {
     #[test]
     fn lefthuffman_encode_new_zero() {
         let writer = LeftBitWriter::new(Cursor::new(Vec::<u8>::new()));
-        let hencoder = LeftHuffmanEncoder::new(writer, &[0_u8, 0_u8, 0_u8, 0_u8]);
+        let hencoder =
+            LeftHuffmanEncoder::new(writer, &[0_u8, 0_u8, 0_u8, 0_u8]);
         let tab = hencoder.get_enc_tab();
 
         assert_eq!(tab.len(), 0);
@@ -160,7 +164,8 @@ mod tests {
     #[test]
     fn righthuffman_encode_new() {
         let writer = RightBitWriter::new(Cursor::new(Vec::<u8>::new()));
-        let hencoder = RightHuffmanEncoder::new(writer, &[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
+        let hencoder =
+            RightHuffmanEncoder::new(writer, &[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
         let tab = hencoder.get_enc_tab();
 
         assert_eq!(tab[0], None);
@@ -178,7 +183,8 @@ mod tests {
     #[test]
     fn righthuffman_encode_write() {
         let writer = RightBitWriter::new(Cursor::new(Vec::<u8>::new()));
-        let mut hencoder = RightHuffmanEncoder::new(writer, &[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
+        let mut hencoder =
+            RightHuffmanEncoder::new(writer, &[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
         for c in "abccddeeeeffffgggggggghhhhhhhh".bytes() {
             let _ = hencoder.enc(&(c - 0x60));
         }

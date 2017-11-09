@@ -8,6 +8,8 @@
 pub mod bucket_sort;
 pub mod cano_huff_table;
 pub mod circular_buffer;
+pub mod lzss_encoder;
+pub mod lzss_decoder;
 
 use bit_vector::BitVector;
 use bucket_sort::BucketSort;
@@ -83,5 +85,17 @@ pub fn creat_huffman_table(
             .collect::<Vec<_>>()
     } else {
         Vec::new()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum LzssCode {
+    Symbol(u8),
+    Reference { len: usize, pos: usize },
+}
+
+impl Default for LzssCode {
+    fn default() -> Self {
+        LzssCode::Symbol(0)
     }
 }

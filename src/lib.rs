@@ -18,6 +18,8 @@ mod bit_reader;
 mod huffman_encoder;
 mod huffman_decoder;
 mod internal;
+mod write;
+mod read;
 
 pub use bit_reader::*;
 pub use bit_vector::BitVector;
@@ -25,3 +27,5 @@ pub use bit_writer::*;
 pub use huffman_decoder::*;
 pub use huffman_encoder::*;
 use internal::*;
+pub use read::Read;
+pub use write::Write;
