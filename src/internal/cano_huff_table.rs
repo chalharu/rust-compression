@@ -149,41 +149,45 @@ fn gen_code<F: Fn(usize, usize) -> usize>(
     lim: usize,
     weight_add_fn: F,
 ) -> Vec<u8> {
-    let mut buf = (freq.len()..(freq.len() << 1))
-        .chain(freq.iter().cloned())
-        .collect();
-
-    create_heap(&mut buf);
-
-    // Generate Huffman Tree
-    let mut i = freq.len() - 1;
-    while i > 0 {
-        let m1 = buf[0];
-        buf[0] = buf[i];
-        down_heap(&mut buf, 0, i);
-        let m2 = buf[0];
-        buf[i] = weight_add_fn(buf[m1], buf[m2]);
-        buf[0] = i;
-        buf[m1] = i;
-        buf[m2] = i;
-        down_heap(&mut buf, 0, i);
-        i -= 1;
-    }
-
-    // Counting
-    buf[1] = 0;
-    for i in 2..freq.len() {
-        buf[i] = buf[buf[i]] + 1;
-    }
-
-    let ret = (0..freq.len())
-        .map(|i| (buf[buf[i + freq.len()]] + 1) as u8)
-        .collect::<Vec<_>>();
-
-    if ret.iter().any(|l| *l as usize > lim) {
-        gen_code_lm(freq, lim, weight_add_fn)
+    if freq.len() == 1 {
+        vec![1]
     } else {
-        ret
+        let mut buf = (freq.len()..(freq.len() << 1))
+            .chain(freq.iter().cloned())
+            .collect();
+
+        create_heap(&mut buf);
+
+        // Generate Huffman Tree
+        let mut i = freq.len() - 1;
+        while i > 0 {
+            let m1 = buf[0];
+            buf[0] = buf[i];
+            down_heap(&mut buf, 0, i);
+            let m2 = buf[0];
+            buf[i] = weight_add_fn(buf[m1], buf[m2]);
+            buf[0] = i;
+            buf[m1] = i;
+            buf[m2] = i;
+            down_heap(&mut buf, 0, i);
+            i -= 1;
+        }
+
+        // Counting
+        buf[1] = 0;
+        for i in 2..freq.len() {
+            buf[i] = buf[buf[i]] + 1;
+        }
+
+        let ret = (0..freq.len())
+            .map(|i| (buf[buf[i + freq.len()]] + 1) as u8)
+            .collect::<Vec<_>>();
+
+        if ret.iter().any(|l| *l as usize > lim) {
+            gen_code_lm(freq, lim, weight_add_fn)
+        } else {
+            ret
+        }
     }
 }
 
@@ -199,15 +203,19 @@ pub fn make_tab_with_fn<F: Fn(usize, usize) -> usize>(
             .enumerate()
             .filter_map(|(i, &t)| if t != 0 { Some((i, t)) } else { None })
             .unzip();
-        s.into_iter()
-            .zip(gen_code(&l, lim, weight_add_fn))
-            .scan(0, move |c, (s, v)| {
-                let r = vec![0; s - *c].into_iter().chain(vec![v]);
-                *c = s + 1;
-                Some(r)
-            })
-            .flat_map(move |v| v)
-            .collect()
+        if s.is_empty() {
+            Vec::new()
+        } else {
+            s.into_iter()
+                .zip(gen_code(&l, lim, weight_add_fn))
+                .scan(0, move |c, (s, v)| {
+                    let r = vec![0; s - *c].into_iter().chain(vec![v]);
+                    *c = s + 1;
+                    Some(r)
+                })
+                .flat_map(move |v| v)
+                .collect()
+        }
     }
 }
 
@@ -238,11 +246,12 @@ mod tests {
     fn create_haffman_tab_with_fn() {
         let symb_len = vec![0_u8, 4, 4, 4, 4, 3, 3, 2, 2];
         let freq = vec![0_usize, 1, 1, 2, 2, 4, 4, 8, 8];
-        let tab = make_tab_with_fn(
-            &freq.iter().map(|i| i << 8).collect::<Vec<_>>(),
-            12,
-            |x, y| ((x & !0xFF) + (y & !0xFF)) | (max(x & 0xFF, y & 0xFF) + 1),
-        );
+        let tab =
+            make_tab_with_fn(
+                &freq.iter().map(|i| i << 8).collect::<Vec<_>>(),
+                12,
+                |x, y| ((x & !0xFF) + (y & !0xFF)) | (max(x & 0xFF, y & 0xFF) + 1),
+            );
 
         assert_eq!(tab, symb_len);
     }
@@ -250,11 +259,12 @@ mod tests {
     #[test]
     fn create_haffman_tab_with_fn_lim_len() {
         let freq = (0..63).collect::<Vec<_>>();
-        let tab = make_tab_with_fn(
-            &freq.iter().map(|i| i << 8).collect::<Vec<_>>(),
-            8,
-            |x, y| ((x & !0xFF) + (y & !0xFF)) | (max(x & 0xFF, y & 0xFF) + 1),
-        );
+        let tab =
+            make_tab_with_fn(
+                &freq.iter().map(|i| i << 8).collect::<Vec<_>>(),
+                8,
+                |x, y| ((x & !0xFF) + (y & !0xFF)) | (max(x & 0xFF, y & 0xFF) + 1),
+            );
 
         assert!(
             tab.iter()
@@ -264,5 +274,13 @@ mod tests {
         );
 
         assert!(*tab.iter().max().unwrap() <= 8);
+    }
+
+    #[test]
+    fn create_haffman_tab_unit() {
+        let freq = vec![0, 1];
+        let tab = make_table(&freq, 12);
+
+        assert_eq!(tab, vec![0, 1]);
     }
 }

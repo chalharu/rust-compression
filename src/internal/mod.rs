@@ -10,6 +10,8 @@ pub mod cano_huff_table;
 pub mod circular_buffer;
 pub mod lzss_encoder;
 pub mod lzss_decoder;
+pub mod lzhuf_encoder;
+pub mod lzhuf_decoder;
 
 use bit_vector::BitVector;
 use bucket_sort::BucketSort;

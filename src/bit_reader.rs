@@ -7,19 +7,21 @@
 
 use bit_vector::BitVector;
 use std::cmp::min;
+use std::io::Error as ioError;
+use std::io::ErrorKind as ioErrorKind;
 use std::io::Read;
+use std::io::Result as ioResult;
 
 pub trait BitReader {
     type R: Read;
-    fn read(&mut self, len: usize) -> ::std::io::Result<BitVector>;
-    fn peek(&mut self, len: usize) -> ::std::io::Result<BitVector>;
-    fn skip(&mut self, len: usize) -> ::std::io::Result<usize>;
-    fn skip_to_byte(&mut self) -> ::std::io::Result<usize>;
-    fn get_ref(&self) -> &Self::R;
-    fn get_mut(&mut self) -> &mut Self::R;
-    fn into_inner(&mut self) -> Result<Self::R, ::std::io::Error>;
+    fn read(&mut self, len: usize) -> ioResult<BitVector>;
+    fn peek(&mut self, len: usize) -> ioResult<BitVector>;
+    fn skip(&mut self, len: usize) -> ioResult<usize>;
+    fn skip_to_byte(&mut self) -> ioResult<usize>;
+    fn into_inner(&mut self) -> ioResult<Self::R>;
 }
 
+#[derive(Clone)]
 pub struct LeftBitReader<R: Read> {
     inner: Option<R>,
     buf: u32,
@@ -34,11 +36,19 @@ impl<R: Read> LeftBitReader<R> {
             counter: 0,
         }
     }
+
+    pub fn get_ref(&self) -> &R {
+        self.inner.as_ref().unwrap()
+    }
+
+    pub fn get_mut(&mut self) -> &mut R {
+        self.inner.as_mut().unwrap()
+    }
 }
 
 impl<R: Read> BitReader for LeftBitReader<R> {
     type R = R;
-    fn read(&mut self, len: usize) -> ::std::io::Result<BitVector> {
+    fn read(&mut self, len: usize) -> ioResult<BitVector> {
         let r = self.peek(len);
         if let Ok(l) = r {
             self.buf <<= l.len();
@@ -47,14 +57,11 @@ impl<R: Read> BitReader for LeftBitReader<R> {
         r
     }
 
-    fn peek(&mut self, len: usize) -> ::std::io::Result<BitVector> {
+    fn peek(&mut self, len: usize) -> ioResult<BitVector> {
         while len > self.counter {
             let ls_count = 32 /* u32 */ - 8 /* u8 */ - (self.counter as isize);
             if ls_count < 0 {
-                return Err(::std::io::Error::new(
-                    ::std::io::ErrorKind::Other,
-                    "len is too long",
-                ));
+                return Err(ioError::new(ioErrorKind::Other, "len is too long"));
             }
             let mut buf = [0_u8; 1];
             if let Ok(rlen) = self.inner.as_mut().unwrap().read(&mut buf) {
@@ -65,10 +72,7 @@ impl<R: Read> BitReader for LeftBitReader<R> {
                 }
             }
             if self.counter == 0 {
-                return Err(::std::io::Error::new(
-                    ::std::io::ErrorKind::UnexpectedEof,
-                    "end of file",
-                ));
+                return Ok(BitVector::new(0, 0));
             }
             break;
         }
@@ -76,7 +80,7 @@ impl<R: Read> BitReader for LeftBitReader<R> {
         Ok(BitVector::new(self.buf >> (32 - l), l))
     }
 
-    fn skip(&mut self, mut len: usize) -> ::std::io::Result<usize> {
+    fn skip(&mut self, mut len: usize) -> ioResult<usize> {
         let r = Ok(len);
         while len > self.counter {
             len -= self.counter;
@@ -90,30 +94,19 @@ impl<R: Read> BitReader for LeftBitReader<R> {
             }
             self.buf = 0;
             self.counter = 0;
-            return Err(::std::io::Error::new(
-                ::std::io::ErrorKind::UnexpectedEof,
-                "end of file",
-            ));
+            return Err(ioError::new(ioErrorKind::UnexpectedEof, "end of file"));
         }
         self.buf <<= len;
         self.counter -= len;
         r
     }
 
-    fn skip_to_byte(&mut self) -> ::std::io::Result<usize> {
+    fn skip_to_byte(&mut self) -> ioResult<usize> {
         let s_count = self.counter & 0x07;
         self.skip(s_count)
     }
 
-    fn get_ref(&self) -> &R {
-        self.inner.as_ref().unwrap()
-    }
-
-    fn get_mut(&mut self) -> &mut R {
-        self.inner.as_mut().unwrap()
-    }
-
-    fn into_inner(&mut self) -> Result<R, ::std::io::Error> {
+    fn into_inner(&mut self) -> ioResult<R> {
         match self.skip_to_byte() {
             Err(e) => Err(e),
             Ok(_) => Ok(self.inner.take().unwrap()),
@@ -121,6 +114,7 @@ impl<R: Read> BitReader for LeftBitReader<R> {
     }
 }
 
+#[derive(Clone)]
 pub struct RightBitReader<R: Read> {
     inner: Option<R>,
     buf: u32,
@@ -135,11 +129,19 @@ impl<R: Read> RightBitReader<R> {
             counter: 0,
         }
     }
+
+    pub fn get_ref(&self) -> &R {
+        self.inner.as_ref().unwrap()
+    }
+
+    pub fn get_mut(&mut self) -> &mut R {
+        self.inner.as_mut().unwrap()
+    }
 }
 
 impl<R: Read> BitReader for RightBitReader<R> {
     type R = R;
-    fn read(&mut self, len: usize) -> ::std::io::Result<BitVector> {
+    fn read(&mut self, len: usize) -> ioResult<BitVector> {
         let r = self.peek(len);
         if let Ok(l) = r {
             self.buf >>= l.len();
@@ -148,13 +150,10 @@ impl<R: Read> BitReader for RightBitReader<R> {
         r
     }
 
-    fn peek(&mut self, len: usize) -> ::std::io::Result<BitVector> {
+    fn peek(&mut self, len: usize) -> ioResult<BitVector> {
         while len > self.counter {
             if 32 /* u32 */ <= 8 /* u8 */ + self.counter {
-                return Err(::std::io::Error::new(
-                    ::std::io::ErrorKind::Other,
-                    "len is too long",
-                ));
+                return Err(ioError::new(ioErrorKind::Other, "len is too long"));
             }
             let mut buf = [0_u8; 1];
             if let Ok(rlen) = self.inner.as_mut().unwrap().read(&mut buf) {
@@ -165,10 +164,9 @@ impl<R: Read> BitReader for RightBitReader<R> {
                 }
             }
             if self.counter == 0 {
-                return Err(::std::io::Error::new(
-                    ::std::io::ErrorKind::UnexpectedEof,
-                    "end of file",
-                ));
+                return Err(
+                    ioError::new(ioErrorKind::UnexpectedEof, "end of file"),
+                );
             }
             break;
         }
@@ -176,7 +174,7 @@ impl<R: Read> BitReader for RightBitReader<R> {
         Ok(BitVector::new(self.buf & ((1 << l) - 1), l))
     }
 
-    fn skip(&mut self, mut len: usize) -> ::std::io::Result<usize> {
+    fn skip(&mut self, mut len: usize) -> ioResult<usize> {
         let r = Ok(len);
         while len > self.counter {
             len -= self.counter;
@@ -190,30 +188,19 @@ impl<R: Read> BitReader for RightBitReader<R> {
             }
             self.buf = 0;
             self.counter = 0;
-            return Err(::std::io::Error::new(
-                ::std::io::ErrorKind::UnexpectedEof,
-                "end of file",
-            ));
+            return Err(ioError::new(ioErrorKind::UnexpectedEof, "end of file"));
         }
         self.buf >>= len;
         self.counter -= len;
         r
     }
 
-    fn skip_to_byte(&mut self) -> ::std::io::Result<usize> {
+    fn skip_to_byte(&mut self) -> ioResult<usize> {
         let s_count = self.counter & 0x07;
         self.skip(s_count)
     }
 
-    fn get_ref(&self) -> &R {
-        self.inner.as_ref().unwrap()
-    }
-
-    fn get_mut(&mut self) -> &mut R {
-        self.inner.as_mut().unwrap()
-    }
-
-    fn into_inner(&mut self) -> Result<R, ::std::io::Error> {
+    fn into_inner(&mut self) -> ioResult<R> {
         match self.skip_to_byte() {
             Err(e) => Err(e),
             Ok(_) => Ok(self.inner.take().unwrap()),
@@ -226,6 +213,7 @@ mod tests {
     use super::*;
     use bit_writer::*;
     use std::io::Cursor;
+    use write::Write;
 
     #[test]
     fn leftbitreader_read() {

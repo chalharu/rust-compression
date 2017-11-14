@@ -83,16 +83,14 @@ mod tests {
 
     fn comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
         match (lhs, rhs) {
-            (
-                LzssCode::Reference {
-                    len: llen,
-                    pos: lpos,
-                },
-                LzssCode::Reference {
-                    len: rlen,
-                    pos: rpos,
-                },
-            ) => ((llen << 3) - lpos).cmp(&((rlen << 3) - rpos)).reverse(),
+            (LzssCode::Reference {
+                 len: llen,
+                 pos: lpos,
+             },
+             LzssCode::Reference {
+                 len: rlen,
+                 pos: rpos,
+             }) => ((llen << 3) - lpos).cmp(&((rlen << 3) - rpos)).reverse(),
             (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
             (_, LzssCode::Symbol(_)) => Ordering::Greater,
             (LzssCode::Symbol(_), _) => Ordering::Less,
@@ -103,11 +101,11 @@ mod tests {
     fn test() {
         let testvec = b"aabbaabbaaabbbaaabbbaabbaabb";
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(testvec);
         let _ = encoder.flush();
 
-        let mut decoder = LzssDecoder::new(encoder.into_inner(), 65536);
+        let mut decoder = LzssDecoder::new(encoder.into_inner(), 65_536);
         let mut ret = Vec::new();
         let _ = decoder.read_to_end(&mut ret);
 

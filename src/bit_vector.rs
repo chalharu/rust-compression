@@ -42,6 +42,11 @@ impl BitVector {
     }
 }
 
+impl Default for BitVector {
+    fn default() -> Self {
+        BitVector::new(0, 0)
+    }
+}
 
 #[cfg(test)]
 mod tests {

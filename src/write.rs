@@ -5,7 +5,10 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use std::cell::RefCell;
 use std::io::{Error, ErrorKind, Result};
+use std::marker::PhantomData;
+use std::rc::Rc;
 
 pub trait Write<T> {
     fn write(&mut self, buf: &T) -> Result<usize>;
@@ -94,5 +97,30 @@ impl<T: Clone> Write<T> for Vec<T> {
     #[inline]
     fn flush(&mut self) -> Result<()> {
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiWriter<T, W: Write<T>>(PhantomData<T>, Rc<RefCell<W>>);
+
+impl<T, W: Write<T>> MultiWriter<T, W> {
+    pub fn new(inner: W) -> Self {
+        MultiWriter(PhantomData, Rc::new(RefCell::new(inner)))
+    }
+
+    pub fn into_inner(self) -> W {
+        Rc::try_unwrap(self.1).ok().unwrap().into_inner()
+    }
+}
+
+impl<T, W: Write<T>> Write<T> for MultiWriter<T, W> {
+    #[inline]
+    fn write(&mut self, buf: &T) -> Result<usize> {
+        self.1.borrow_mut().write(buf)
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        self.1.borrow_mut().flush()
     }
 }

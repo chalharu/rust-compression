@@ -10,12 +10,15 @@ use bit_vector::BitVector;
 use internal;
 use num_traits::{NumCast, cast};
 use std::collections::HashMap;
+use std::io::Error as ioError;
+use std::io::ErrorKind as ioErrorKind;
+use std::io::Result as ioResult;
 
 pub trait HuffmanDecoder {
     type BR: BitReader;
     type Item: Clone + NumCast;
 
-    fn dec(&mut self) -> ::std::io::Result<Self::Item>;
+    fn dec(&mut self) -> ioResult<Option<Self::Item>>;
     fn get_ref(&self) -> &Self::BR;
     fn get_mut(&mut self) -> &mut Self::BR;
     fn into_inner(&mut self) -> Self::BR;
@@ -71,9 +74,12 @@ macro_rules! huffman_decoder_impl {
             type BR = BR;
             type Item = T;
 
-            fn dec(&mut self) -> ::std::io::Result<Self::Item> {
+            fn dec(&mut self) -> ioResult<Option<Self::Item>> {
                 match self.inner.as_mut().unwrap().peek(self.stab_bits) {
                     Ok(c) => {
+                        if c.len() == 0 {
+                            return Ok(None);
+                        }
                         let c = if !$is_rev {
                             (c.data() << (self.stab_bits - c.len()))
                         } else {
@@ -82,7 +88,7 @@ macro_rules! huffman_decoder_impl {
                         if let Some(ref v) = self.stab[c] {
                             let _ =
                                 self.inner.as_mut().unwrap().skip(v.1 as usize);
-                            Ok(v.0.clone())
+                            Ok(Some(v.0.clone()))
                         } else {
                             let mut l = self.stab_bits;
                             while l < 32 {
@@ -98,7 +104,7 @@ macro_rules! huffman_decoder_impl {
                                                 .as_mut()
                                                 .unwrap()
                                                 .skip(b.len());
-                                            return Ok(v.clone());
+                                            return Ok(Some(v.clone()));
                                         }
                                     } else {
                                         while b.len() < 32 {
@@ -118,18 +124,18 @@ macro_rules! huffman_decoder_impl {
                                                     .as_mut()
                                                     .unwrap()
                                                     .skip(b.len());
-                                                return Ok(v.clone());
+                                                return Ok(Some(v.clone()));
                                             }
                                         }
-                                        return Err(::std::io::Error::new(
-                                            ::std::io::ErrorKind::InvalidData,
+                                        return Err(ioError::new(
+                                            ioErrorKind::InvalidData,
                                             "huffman error",
                                         ));
                                     }
                                 }
                             }
-                            return Err(::std::io::Error::new(
-                                ::std::io::ErrorKind::InvalidData,
+                            return Err(ioError::new(
+                                ioErrorKind::InvalidData,
                                 "huffman error",
                             ));
                         }
@@ -182,7 +188,7 @@ mod tests {
             LeftHuffmanDecoder::<_, u8>::new(reader, &symb_len, 12);
 
         let mut ac = Vec::<u8>::new();
-        while let Ok(c) = hdecoder.dec() {
+        while let Ok(Some(c)) = hdecoder.dec() {
             ac.push(c + 0x60);
         }
 
@@ -208,7 +214,7 @@ mod tests {
             LeftHuffmanDecoder::<_, u8>::new(reader, &symb_len, 2);
 
         let mut ac = Vec::<u8>::new();
-        while let Ok(c) = hdecoder.dec() {
+        while let Ok(Some(c)) = hdecoder.dec() {
             ac.push(c + 0x60);
         }
 
@@ -234,7 +240,7 @@ mod tests {
 
         let mut ac = Vec::<u8>::new();
         while let Ok(c) = hdecoder.dec() {
-            ac.push(c + 0x60);
+            ac.push(c.unwrap() + 0x60);
         }
 
         assert_eq!(String::from_utf8(ac).ok().unwrap(), s);
@@ -260,7 +266,7 @@ mod tests {
 
         let mut ac = Vec::<u8>::new();
         while let Ok(c) = hdecoder.dec() {
-            ac.push(c + 0x60);
+            ac.push(c.unwrap() + 0x60);
         }
 
         assert_eq!(String::from_utf8(ac).ok().unwrap(), s);

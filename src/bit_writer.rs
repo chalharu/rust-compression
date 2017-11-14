@@ -7,16 +7,9 @@
 
 use bit_vector::BitVector;
 use std::io::Write as ioWrite;
+use write::Write;
 
-pub trait BitWriter {
-    type W: ioWrite;
-    fn write(&mut self, buf: &BitVector) -> ::std::io::Result<usize>;
-    fn pad_flush(&mut self) -> ::std::io::Result<()>;
-    fn get_ref(&self) -> &Self::W;
-    fn get_mut(&mut self) -> &mut Self::W;
-    fn into_inner(&mut self) -> Result<Self::W, ::std::io::Error>;
-}
-
+#[derive(Clone)]
 pub struct LeftBitWriter<W: ioWrite> {
     inner: Option<W>,
     buf: u8,
@@ -31,10 +24,24 @@ impl<W: ioWrite> LeftBitWriter<W> {
             counter: 8,
         }
     }
+
+    pub fn get_ref(&self) -> &W {
+        self.inner.as_ref().unwrap()
+    }
+
+    pub fn get_mut(&mut self) -> &mut W {
+        self.inner.as_mut().unwrap()
+    }
+
+    pub fn into_inner(&mut self) -> Result<W, ::std::io::Error> {
+        match self.flush() {
+            Err(e) => Err(e),
+            Ok(()) => Ok(self.inner.take().unwrap()),
+        }
+    }
 }
 
-impl<W: ioWrite> BitWriter for LeftBitWriter<W> {
-    type W = W;
+impl<W: ioWrite> Write<BitVector> for LeftBitWriter<W> {
     fn write(&mut self, data: &BitVector) -> ::std::io::Result<usize> {
         const BIT_LEN: usize = 32 /* u32 */;
         if data.is_empty() {
@@ -45,7 +52,8 @@ impl<W: ioWrite> BitWriter for LeftBitWriter<W> {
         let mut r = 0;
         while len >= self.counter {
             let result = self.inner.as_mut().unwrap().write(
-                &[self.buf | (data >> (BIT_LEN - self.counter)) as u8; 1],
+                &[self.buf | (data >> (BIT_LEN - self.counter)) as u8;
+                    1],
             );
             if let Ok(l) = result {
                 if l == 0 {
@@ -69,7 +77,7 @@ impl<W: ioWrite> BitWriter for LeftBitWriter<W> {
         Ok(r + len)
     }
 
-    fn pad_flush(&mut self) -> ::std::io::Result<()> {
+    fn flush(&mut self) -> ::std::io::Result<()> {
         let c = self.counter;
         if c != 8 {
             let r = self.write(&BitVector::new(0, c));
@@ -79,32 +87,18 @@ impl<W: ioWrite> BitWriter for LeftBitWriter<W> {
         }
         self.inner.as_mut().unwrap().flush()
     }
-
-    fn get_ref(&self) -> &W {
-        self.inner.as_ref().unwrap()
-    }
-
-    fn get_mut(&mut self) -> &mut W {
-        self.inner.as_mut().unwrap()
-    }
-
-    fn into_inner(&mut self) -> Result<W, ::std::io::Error> {
-        match self.pad_flush() {
-            Err(e) => Err(e),
-            Ok(()) => Ok(self.inner.take().unwrap()),
-        }
-    }
 }
 
 impl<W: ioWrite> Drop for LeftBitWriter<W> {
     fn drop(&mut self) {
         if self.inner.is_some() {
             // dtors should not panic, so we ignore a failed flush
-            let _r = self.pad_flush();
+            let _r = self.flush();
         }
     }
 }
 
+#[derive(Clone)]
 pub struct RightBitWriter<W: ioWrite> {
     inner: Option<W>,
     buf: u8,
@@ -119,10 +113,24 @@ impl<W: ioWrite> RightBitWriter<W> {
             counter: 8,
         }
     }
+
+    pub fn get_ref(&self) -> &W {
+        self.inner.as_ref().unwrap()
+    }
+
+    pub fn get_mut(&mut self) -> &mut W {
+        self.inner.as_mut().unwrap()
+    }
+
+    pub fn into_inner(&mut self) -> Result<W, ::std::io::Error> {
+        match self.flush() {
+            Err(e) => Err(e),
+            Ok(()) => Ok(self.inner.take().unwrap()),
+        }
+    }
 }
 
-impl<W: ioWrite> BitWriter for RightBitWriter<W> {
-    type W = W;
+impl<W: ioWrite> Write<BitVector> for RightBitWriter<W> {
     fn write(&mut self, data: &BitVector) -> ::std::io::Result<usize> {
         const BIT_LEN: usize = 8 /* u8 */;
         let mut len = data.len();
@@ -130,7 +138,8 @@ impl<W: ioWrite> BitWriter for RightBitWriter<W> {
         let mut r = 0;
         while len >= self.counter {
             let result = self.inner.as_mut().unwrap().write(
-                &[self.buf | (data << (BIT_LEN - self.counter)) as u8; 1],
+                &[self.buf | (data << (BIT_LEN - self.counter)) as u8;
+                    1],
             );
             if let Ok(l) = result {
                 if l == 0 {
@@ -154,7 +163,7 @@ impl<W: ioWrite> BitWriter for RightBitWriter<W> {
         Ok(r + len)
     }
 
-    fn pad_flush(&mut self) -> ::std::io::Result<()> {
+    fn flush(&mut self) -> ::std::io::Result<()> {
         let c = self.counter;
         if c != 8 {
             let r = self.write(&BitVector::new(0, c));
@@ -164,28 +173,13 @@ impl<W: ioWrite> BitWriter for RightBitWriter<W> {
         }
         self.inner.as_mut().unwrap().flush()
     }
-
-    fn get_ref(&self) -> &W {
-        self.inner.as_ref().unwrap()
-    }
-
-    fn get_mut(&mut self) -> &mut W {
-        self.inner.as_mut().unwrap()
-    }
-
-    fn into_inner(&mut self) -> Result<W, ::std::io::Error> {
-        match self.pad_flush() {
-            Err(e) => Err(e),
-            Ok(()) => Ok(self.inner.take().unwrap()),
-        }
-    }
 }
 
 impl<W: ioWrite> Drop for RightBitWriter<W> {
     fn drop(&mut self) {
         if self.inner.is_some() {
             // dtors should not panic, so we ignore a failed flush
-            let _r = self.pad_flush();
+            let _r = self.flush();
         }
     }
 }
@@ -225,7 +219,7 @@ mod tests {
         let _ = writer.write(&BitVector::new(2, 2));
         let _ = writer.write(&BitVector::new(3, 3));
         assert_eq!(writer.get_ref().len(), 0);
-        let _ = writer.pad_flush();
+        let _ = writer.flush();
         assert_eq!(writer.get_ref()[0], 204);
         assert_eq!(writer.get_ref().len(), 1);
     }
@@ -286,7 +280,7 @@ mod tests {
         let _ = writer.write(&BitVector::new(2, 2));
         let _ = writer.write(&BitVector::new(3, 3));
         assert_eq!(writer.get_ref().len(), 0);
-        let _ = writer.pad_flush();
+        let _ = writer.flush();
         assert_eq!(writer.get_ref()[0], 0b0001_1101);
         assert_eq!(writer.get_ref().len(), 1);
     }

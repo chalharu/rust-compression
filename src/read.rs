@@ -6,7 +6,11 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use std::{cmp, fmt, mem, ptr};
+use std::cell::RefCell;
+use std::fmt::Debug;
 use std::io::{Error, ErrorKind, Result};
+use std::marker::PhantomData;
+use std::rc::Rc;
 
 const DEFAULT_BUF_SIZE: usize = 8 * 1024;
 
@@ -96,7 +100,7 @@ impl<I: Default, T: Read<I>, U: Read<I>> Read<I> for Chain<T, U> {
     fn read(&mut self, buf: &mut [I]) -> Result<usize> {
         if !self.done_first {
             match self.first.read(buf)? {
-                0 if buf.len() != 0 => {
+                0 if !buf.is_empty() => {
                     self.done_first = true;
                 }
                 n => return Ok(n),
@@ -289,6 +293,29 @@ impl<T: Clone + Default> Read<T> for Vec<T> {
 
         *self = b.to_vec();
         Ok(amt)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiReader<T: Default + Clone + Debug, R: Read<T>>(
+    PhantomData<T>,
+    Rc<RefCell<R>>
+);
+
+impl<T: Default + Clone + Debug, R: Read<T>> MultiReader<T, R> {
+    pub fn new(inner: R) -> Self {
+        MultiReader(PhantomData, Rc::new(RefCell::new(inner)))
+    }
+
+    pub fn into_inner(self) -> R {
+        Rc::try_unwrap(self.1).ok().unwrap().into_inner()
+    }
+}
+
+impl<T: Default + Clone + Debug, R: Read<T>> Read<T> for MultiReader<T, R> {
+    #[inline]
+    fn read(&mut self, buf: &mut [T]) -> Result<usize> {
+        self.1.borrow_mut().read(buf)
     }
 }
 

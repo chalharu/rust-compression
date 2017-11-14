@@ -6,7 +6,7 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use {MaxValue, MinValue};
-use num_traits::{cast, NumCast};
+use num_traits::{NumCast, cast};
 use std::ops::{Add, Sub};
 
 
@@ -51,16 +51,17 @@ impl<T: Clone> BucketSort for [T] {
             vec![0; cast::<K, usize>(max - min.clone()).unwrap() + 2];
 
         for i in 0..self.len() {
-            bucket[cast::<_, usize>(key_selector(&self[i]) - min.clone())
-                       .unwrap() + 1] += 1;
+            bucket[cast::<_, usize>(
+                key_selector(&self[i]) - min.clone(),
+            ).unwrap() + 1] += 1;
         }
         for i in 2..bucket.len() {
             bucket[i] += bucket[i - 1];
         }
         for i in self {
             let val = i.clone();
-            let idx =
-                cast::<_, usize>(key_selector(&val) - min.clone()).unwrap();
+            let idx = cast::<_, usize>(key_selector(&val) - min.clone())
+                .unwrap();
             ret[bucket[idx]] = val;
             bucket[idx] += 1;
         }

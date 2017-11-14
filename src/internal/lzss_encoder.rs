@@ -8,7 +8,7 @@
 use LzssCode;
 use Write;
 use circular_buffer::CircularBuffer;
-use std::cmp::{min, Ordering};
+use std::cmp::{Ordering, min};
 use std::io::Result as ioResult;
 use std::io::Write as ioWrite;
 use std::mem;
@@ -27,14 +27,14 @@ impl HashTab {
     #[cfg(target_pointer_width = "32")]
     const HASH_FRAC: usize = 0x7A7C4F9F;
     #[cfg(target_pointer_width = "64")]
-    const HASH_FRAC: usize = 0x7A7C4F9F7A7C4F9F;
+    const HASH_FRAC: usize = 0x7A7C_4F9F_7A7C_4F9F;
     #[cfg(target_pointer_width = "32")]
     const USIZE_WIDTH: usize = 32;
     #[cfg(target_pointer_width = "64")]
     const USIZE_WIDTH: usize = 64;
 
     #[cfg(all(not(target_pointer_width = "64"),
-              not(target_pointer_width = "32")))]
+                not(target_pointer_width = "32")))]
     fn usize_width() -> usize {
         usize::count_zeros(0_usize)
     }
@@ -46,7 +46,7 @@ impl HashTab {
     }
 
     #[cfg(all(not(target_pointer_width = "64"),
-              not(target_pointer_width = "32")))]
+                not(target_pointer_width = "32")))]
     const HASH_FRAC: usize = 0x7A7C4F9F7A7C4F9F;
 
     #[inline]
@@ -72,8 +72,8 @@ impl HashTab {
         for d in data {
             hash = (hash << 8) | (hash >> 24) ^ usize::from(*d);
         }
-        hash.overflowing_mul(Self::HASH_FRAC).0
-            >> (Self::usize_width() - Self::HASH_SIZE)
+        hash.overflowing_mul(Self::HASH_FRAC).0 >>
+            (Self::usize_width() - Self::HASH_SIZE)
     }
 
     #[inline]
@@ -165,8 +165,8 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
         }
 
         let mut l = 0;
-        while self.buf.get_raw_ref()[pos1] == self.buf.get_raw_ref()[pos2]
-            && l < max_match
+        while self.buf.get_raw_ref()[pos1] == self.buf.get_raw_ref()[pos2] &&
+            l < max_match
         {
             l += 1;
             if pos2 == cap {
@@ -220,15 +220,16 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
                 pos: pos as u16,
             };
 
-            info = info.and_then(|iinfo: MatchInfo| {
-                if iinfo.len >= nlen
-                    || compare_match_info(&self.comparison, &iinfo, &new_info)
-                        == Ordering::Less
-                {
-                    Some(iinfo)
-                } else {
-                    None
-                }
+            info = info.and_then(|iinfo: MatchInfo| if iinfo.len >= nlen ||
+                compare_match_info(
+                    &self.comparison,
+                    &iinfo,
+                    &new_info,
+                ) == Ordering::Less
+            {
+                Some(iinfo)
+            } else {
+                None
             }).or(Some(new_info));
 
             if nlen == max_match {
@@ -269,10 +270,7 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> Index<usize> for SlideDict<F> {
     }
 }
 
-pub struct LzssEncoder<
-    W: Write<LzssCode>,
-    F: Fn(LzssCode, LzssCode) -> Ordering,
-> {
+pub struct LzssEncoder<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering> {
     inner: Option<W>,
     slide: SlideDict<F>,
     min_match: usize,
@@ -328,7 +326,8 @@ impl<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering>
             Some(x)
         } else {
             None
-        }) {
+        })
+        {
             let lazy_level = min(info.len, self.lazy_level);
             let mut out_info = info.clone();
             let mut lazy_index = 0;
@@ -336,12 +335,14 @@ impl<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering>
                 if out_info.len >= self.max_match {
                     break;
                 }
-                if let Some(item) =
-                    self.slide.search_dic(self.offset - i, self.max_match)
+                if let Some(item) = self.slide.search_dic(
+                    self.offset - i,
+                    self.max_match,
+                )
                 {
-                    if item.len > self.min_match
-                        && compare_match_info(&self.comp, &item, &out_info)
-                            == Ordering::Less
+                    if item.len > self.min_match &&
+                        compare_match_info(&self.comp, &item, &out_info) ==
+                            Ordering::Less
                     {
                         out_info = item;
                         lazy_index = i;
@@ -351,50 +352,57 @@ impl<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering>
 
             match lazy_index {
                 0 => {}
-                1 => if let Err(e) = self.inner
-                    .as_mut()
-                    .unwrap()
-                    .write(&LzssCode::Symbol(self.slide[self.offset - 1]))
-                {
-                    return Err(e);
-                },
-                2 => {
-                    if let Err(e) = self.inner
-                        .as_mut()
-                        .unwrap()
-                        .write(&LzssCode::Symbol(self.slide[self.offset - 1]))
-                    {
-                        return Err(e);
-                    }
-                    if let Err(e) = self.inner
-                        .as_mut()
-                        .unwrap()
-                        .write(&LzssCode::Symbol(self.slide[self.offset - 2]))
+                1 => {
+                    if let Err(e) = self.inner.as_mut().unwrap().write(
+                        &LzssCode::Symbol(self.slide[self.offset - 1]),
+                    )
                     {
                         return Err(e);
                     }
                 }
-                _ => if let Err(e) =
-                    self.inner.as_mut().unwrap().write(&LzssCode::Reference {
-                        len: lazy_index,
-                        pos: info.pos as usize - 1,
-                    }) {
-                    return Err(e);
-                },
+                2 => {
+                    if let Err(e) = self.inner.as_mut().unwrap().write(
+                        &LzssCode::Symbol(self.slide[self.offset - 1]),
+                    )
+                    {
+                        return Err(e);
+                    }
+                    if let Err(e) = self.inner.as_mut().unwrap().write(
+                        &LzssCode::Symbol(self.slide[self.offset - 2]),
+                    )
+                    {
+                        return Err(e);
+                    }
+                }
+                _ => {
+                    if let Err(e) = self.inner.as_mut().unwrap().write(
+                        &LzssCode::Reference {
+                            len: lazy_index,
+                            pos: info.pos as usize - 1,
+                        },
+                    )
+                    {
+                        return Err(e);
+                    }
+                }
             }
-            if let Err(e) =
-                self.inner.as_mut().unwrap().write(&LzssCode::Reference {
+            if let Err(e) = self.inner.as_mut().unwrap().write(
+                &LzssCode::Reference {
                     len: out_info.len,
                     pos: out_info.pos as usize - 1,
-                }) {
+                },
+            )
+            {
                 return Err(e);
             }
             self.offset -= out_info.len + lazy_index;
         } else {
-            if let Err(e) = self.inner
-                .as_mut()
-                .unwrap()
-                .write(&LzssCode::Symbol(self.slide[self.offset - 1]))
+            if let Err(e) = self.inner.as_mut().unwrap().write(
+                &LzssCode::Symbol(
+                    self.slide[self.offset -
+                                   1],
+                ),
+            )
             {
                 return Err(e);
             }
@@ -411,7 +419,8 @@ impl<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering> ioWrite
             Ok(0)
         } else {
             let size_of_read = min(
-                self.max_match + self.lazy_level - self.offset + 1,
+                self.max_match + self.lazy_level -
+                    self.offset + 1,
                 buf.len(),
             );
             self.slide.append(&buf[..size_of_read]);
@@ -431,7 +440,7 @@ impl<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering> ioWrite
                 return Err(e);
             }
         }
-        Ok(())
+        self.inner.as_mut().unwrap().flush()
     }
 }
 
@@ -441,16 +450,14 @@ mod tests {
 
     fn comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
         match (lhs, rhs) {
-            (
-                LzssCode::Reference {
-                    len: llen,
-                    pos: lpos,
-                },
-                LzssCode::Reference {
-                    len: rlen,
-                    pos: rpos,
-                },
-            ) => ((llen << 3) - lpos).cmp(&((rlen << 3) - rpos)).reverse(),
+            (LzssCode::Reference {
+                 len: llen,
+                 pos: lpos,
+             },
+             LzssCode::Reference {
+                 len: rlen,
+                 pos: rpos,
+             }) => ((llen << 3) - lpos).cmp(&((rlen << 3) - rpos)).reverse(),
             (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
             (_, LzssCode::Symbol(_)) => Ordering::Greater,
             (LzssCode::Symbol(_), _) => Ordering::Less,
@@ -460,7 +467,7 @@ mod tests {
     #[test]
     fn test_unit() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(b"a");
         let _ = encoder.flush();
 
@@ -470,7 +477,7 @@ mod tests {
     #[test]
     fn test_2len() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(b"aa");
         let _ = encoder.flush();
 
@@ -483,7 +490,7 @@ mod tests {
     #[test]
     fn test_3len() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(b"aaa");
         let _ = encoder.flush();
 
@@ -500,7 +507,7 @@ mod tests {
     #[test]
     fn test_4len() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(b"aaaa");
         let _ = encoder.flush();
 
@@ -516,7 +523,7 @@ mod tests {
     #[test]
     fn test_short_len() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(b"aaaaaaaaaaa");
         let _ = encoder.flush();
 
@@ -532,13 +539,14 @@ mod tests {
     #[test]
     fn test_middle_repeat() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(
-            &(b"a".into_iter()
-                .cycle()
-                .take(256)
-                .cloned()
-                .collect::<Vec<u8>>()),
+            &(b"a"
+                  .into_iter()
+                  .cycle()
+                  .take(256)
+                  .cloned()
+                  .collect::<Vec<u8>>()),
         );
         let _ = encoder.flush();
 
@@ -554,13 +562,14 @@ mod tests {
     #[test]
     fn test_long_repeat() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(
-            &(b"a".into_iter()
-                .cycle()
-                .take(259)
-                .cloned()
-                .collect::<Vec<u8>>()),
+            &(b"a"
+                  .into_iter()
+                  .cycle()
+                  .take(259)
+                  .cloned()
+                  .collect::<Vec<u8>>()),
         );
         let _ = encoder.flush();
 
@@ -578,13 +587,14 @@ mod tests {
     #[test]
     fn test_long_repeat2() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(
-            &(b"a".into_iter()
-                .cycle()
-                .take(260)
-                .cloned()
-                .collect::<Vec<u8>>()),
+            &(b"a"
+                  .into_iter()
+                  .cycle()
+                  .take(260)
+                  .cloned()
+                  .collect::<Vec<u8>>()),
         );
         let _ = encoder.flush();
 
@@ -601,7 +611,7 @@ mod tests {
     #[test]
     fn test_5() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(b"aaabbbaaabbb");
         let _ = encoder.flush();
 
@@ -622,7 +632,7 @@ mod tests {
     #[test]
     fn test_6() {
         let mut encoder =
-            LzssEncoder::new(Vec::new(), comparison, 65536, 256, 3, 3);
+            LzssEncoder::new(Vec::new(), comparison, 65_536, 256, 3, 3);
         let _ = encoder.write_all(b"aabbaabbaaabbbaaabbbaabbaabb");
         let _ = encoder.flush();
 

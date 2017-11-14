@@ -6,12 +6,13 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use bit_vector::BitVector;
-use bit_writer::BitWriter;
 use internal;
 use num_traits::{NumCast, cast};
+// use bit_writer::BitWriter;
+use write::Write;
 
 pub trait HuffmanEncoder {
-    type BW: BitWriter;
+    type BW: Write<BitVector>;
     fn enc<T: NumCast + Clone>(&mut self, data: &T)
         -> ::std::io::Result<usize>;
     fn get_enc_tab(&self) -> &[Option<BitVector>];
@@ -22,12 +23,12 @@ pub trait HuffmanEncoder {
 
 macro_rules! huffman_encoder_impl {
     ($name:ident, $is_rev:expr) => {
-        pub struct $name<BW: BitWriter> {
+        pub struct $name<BW: Write<BitVector>> {
             inner: Option<BW>,
             bit_vec_tab: Vec<Option<BitVector>>,
         }
 
-        impl<BW: BitWriter> $name<BW> {
+        impl<BW: Write<BitVector>> $name<BW> {
             pub fn new(inner: BW, symb_len: &[u8]) -> Self {
                 Self {
                     inner: Some(inner),
@@ -36,7 +37,7 @@ macro_rules! huffman_encoder_impl {
             }
         }
 
-        impl<BW: BitWriter> HuffmanEncoder for $name<BW> {
+        impl<BW: Write<BitVector>> HuffmanEncoder for $name<BW> {
             type BW = BW;
             fn enc<
                 T: NumCast + Clone
