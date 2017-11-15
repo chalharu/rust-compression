@@ -107,10 +107,8 @@ impl<R: Read> BitReader for LeftBitReader<R> {
     }
 
     fn into_inner(&mut self) -> ioResult<R> {
-        match self.skip_to_byte() {
-            Err(e) => Err(e),
-            Ok(_) => Ok(self.inner.take().unwrap()),
-        }
+        try!(self.skip_to_byte());
+        Ok(self.inner.take().unwrap())
     }
 }
 
@@ -201,10 +199,8 @@ impl<R: Read> BitReader for RightBitReader<R> {
     }
 
     fn into_inner(&mut self) -> ioResult<R> {
-        match self.skip_to_byte() {
-            Err(e) => Err(e),
-            Ok(_) => Ok(self.inner.take().unwrap()),
-        }
+        try!(self.skip_to_byte());
+        Ok(self.inner.take().unwrap())
     }
 }
 

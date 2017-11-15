@@ -75,72 +75,68 @@ macro_rules! huffman_decoder_impl {
             type Item = T;
 
             fn dec(&mut self) -> ioResult<Option<Self::Item>> {
-                match self.inner.as_mut().unwrap().peek(self.stab_bits) {
-                    Ok(c) => {
-                        if c.len() == 0 {
-                            return Ok(None);
-                        }
-                        let c = if !$is_rev {
-                            (c.data() << (self.stab_bits - c.len()))
-                        } else {
-                            c.data()
-                        } as usize;
-                        if let Some(ref v) = self.stab[c] {
-                            let _ =
-                                self.inner.as_mut().unwrap().skip(v.1 as usize);
-                            Ok(Some(v.0.clone()))
-                        } else {
-                            let mut l = self.stab_bits;
-                            while l < 32 {
-                                l += 1;
-                                if let Ok(mut b) = self.inner
-                                    .as_mut()
-                                    .unwrap()
-                                    .peek(l)
-                                {
-                                    if b.len() == l {
-                                        if let Some(v) = self.long_map.get(&b) {
-                                            let _ = self.inner
-                                                .as_mut()
-                                                .unwrap()
-                                                .skip(b.len());
-                                            return Ok(Some(v.clone()));
-                                        }
-                                    } else {
-                                        while b.len() < 32 {
-                                            l += 1;
-                                            b = BitVector::new(
-                                                if !$is_rev {
-                                                    b.data() << 1
-                                                } else {
-                                                    b.data()
-                                                },
-                                                b.len() + 1,
-                                            );
-                                            if let Some(v) = self.long_map
-                                                .get(&b)
-                                            {
-                                                let _ = self.inner
-                                                    .as_mut()
-                                                    .unwrap()
-                                                    .skip(b.len());
-                                                return Ok(Some(v.clone()));
-                                            }
-                                        }
-                                        return Err(ioError::new(
-                                            ioErrorKind::InvalidData,
-                                            "huffman error",
-                                        ));
+                let c = try!(self.inner.as_mut().unwrap().peek(self.stab_bits));
+                if c.len() == 0 {
+                    return Ok(None);
+                }
+                let c = if !$is_rev {
+                    (c.data() << (self.stab_bits - c.len()))
+                } else {
+                    c.data()
+                } as usize;
+                if let Some(ref v) = self.stab[c] {
+                    let _ =
+                        self.inner.as_mut().unwrap().skip(v.1 as usize);
+                    Ok(Some(v.0.clone()))
+                } else {
+                    let mut l = self.stab_bits;
+                    while l < 32 {
+                        l += 1;
+                        if let Ok(mut b) = self.inner
+                            .as_mut()
+                            .unwrap()
+                            .peek(l)
+                        {
+                            if b.len() == l {
+                                if let Some(v) = self.long_map.get(&b) {
+                                    let _ = self.inner
+                                        .as_mut()
+                                        .unwrap()
+                                        .skip(b.len());
+                                    return Ok(Some(v.clone()));
+                                }
+                            } else {
+                                while b.len() < 32 {
+                                    l += 1;
+                                    b = BitVector::new(
+                                        if !$is_rev {
+                                            b.data() << 1
+                                        } else {
+                                            b.data()
+                                        },
+                                        b.len() + 1,
+                                    );
+                                    if let Some(v) = self.long_map
+                                        .get(&b)
+                                    {
+                                        let _ = self.inner
+                                            .as_mut()
+                                            .unwrap()
+                                            .skip(b.len());
+                                        return Ok(Some(v.clone()));
                                     }
                                 }
+                                return Err(ioError::new(
+                                    ioErrorKind::InvalidData,
+                                    "huffman error",
+                                ));
                             }
-                            return Err(ioError::new(
-                                ioErrorKind::InvalidData,
-                                "huffman error",
-                            ));
                         }
                     }
-                    Err(e) => Err(e),
+                    return Err(ioError::new(
+                        ioErrorKind::InvalidData,
+                        "huffman error",
+                    ));
                 }
             }
 

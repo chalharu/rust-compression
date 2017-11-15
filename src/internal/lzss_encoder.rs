@@ -368,59 +368,38 @@ impl<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering>
             match lazy_index {
                 0 => {}
                 1 => {
-                    if let Err(e) = self.inner.as_mut().unwrap().write(
-                        &LzssCode::Symbol(self.slide[self.offset - 1]),
-                    )
-                    {
-                        return Err(e);
-                    }
+                    try!(self.inner.as_mut().unwrap().write(&LzssCode::Symbol(
+                        self.slide[self.offset - 1],
+                    )));
                 }
                 2 => {
-                    if let Err(e) = self.inner.as_mut().unwrap().write(
-                        &LzssCode::Symbol(self.slide[self.offset - 1]),
-                    )
-                    {
-                        return Err(e);
-                    }
-                    if let Err(e) = self.inner.as_mut().unwrap().write(
-                        &LzssCode::Symbol(self.slide[self.offset - 2]),
-                    )
-                    {
-                        return Err(e);
-                    }
+                    try!(self.inner.as_mut().unwrap().write(&LzssCode::Symbol(
+                        self.slide[self.offset - 1],
+                    )));
+                    try!(self.inner.as_mut().unwrap().write(&LzssCode::Symbol(
+                        self.slide[self.offset - 2],
+                    )));
                 }
                 _ => {
-                    if let Err(e) = self.inner.as_mut().unwrap().write(
-                        &LzssCode::Reference {
-                            len: lazy_index,
-                            pos: info.pos as usize - 1,
-                        },
-                    )
-                    {
-                        return Err(e);
-                    }
+                    try!(
+                        self.inner.as_mut().unwrap().write(
+                            &LzssCode::Reference {
+                                len: lazy_index,
+                                pos: info.pos as usize - 1,
+                            },
+                        )
+                    );
                 }
             }
-            if let Err(e) = self.inner.as_mut().unwrap().write(
-                &LzssCode::Reference {
-                    len: out_info.len,
-                    pos: out_info.pos as usize - 1,
-                },
-            )
-            {
-                return Err(e);
-            }
+            try!(self.inner.as_mut().unwrap().write(&LzssCode::Reference {
+                len: out_info.len,
+                pos: out_info.pos as usize - 1,
+            }));
             self.offset -= out_info.len + lazy_index;
         } else {
-            if let Err(e) = self.inner.as_mut().unwrap().write(
-                &LzssCode::Symbol(
-                    self.slide[self.offset -
-                                   1],
-                ),
-            )
-            {
-                return Err(e);
-            }
+            try!(self.inner.as_mut().unwrap().write(&LzssCode::Symbol(
+                self.slide[self.offset - 1],
+            )));
             self.offset -= 1;
         }
         Ok(())
@@ -441,9 +420,7 @@ impl<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering> ioWrite
             self.slide.append(&buf[..size_of_read]);
             self.offset += size_of_read;
             while self.offset > self.max_match + self.lazy_level {
-                if let Err(e) = self.encode() {
-                    return Err(e);
-                }
+                try!(self.encode());
             }
             Ok(size_of_read)
         }
@@ -451,9 +428,7 @@ impl<W: Write<LzssCode>, F: Fn(LzssCode, LzssCode) -> Ordering> ioWrite
 
     fn flush(&mut self) -> ioResult<()> {
         while self.offset > 0 {
-            if let Err(e) = self.encode() {
-                return Err(e);
-            }
+            try!(self.encode());
         }
         self.inner.as_mut().unwrap().flush()
     }

@@ -8,13 +8,14 @@
 use bit_vector::BitVector;
 use internal;
 use num_traits::{NumCast, cast};
-// use bit_writer::BitWriter;
+use std::io::Error as ioError;
+use std::io::ErrorKind as ioErrorKind;
+use std::io::Result as ioResult;
 use write::Write;
 
 pub trait HuffmanEncoder {
     type BW: Write<BitVector>;
-    fn enc<T: NumCast + Clone>(&mut self, data: &T)
-        -> ::std::io::Result<usize>;
+    fn enc<T: NumCast + Clone>(&mut self, data: &T) -> ioResult<usize>;
     fn get_enc_tab(&self) -> &[Option<BitVector>];
     fn get_ref(&self) -> &Self::BW;
     fn get_mut(&mut self) -> &mut Self::BW;
@@ -44,7 +45,7 @@ macro_rules! huffman_encoder_impl {
             >(
                 &mut self,
                 data: &T,
-            ) -> ::std::io::Result<usize> {
+            ) -> ioResult<usize> {
                 if let Some(idx) = cast::<_, usize>(data.clone()) {
                     if idx < self.bit_vec_tab.len() {
                         if let Some(ref bv) = self.bit_vec_tab[idx] {
@@ -52,8 +53,8 @@ macro_rules! huffman_encoder_impl {
                         }
                     }
                 }
-                Err(::std::io::Error::new(
-                    ::std::io::ErrorKind::Other,
+                Err(ioError::new(
+                    ioErrorKind::Other,
                     "out of value",
                 ))
             }

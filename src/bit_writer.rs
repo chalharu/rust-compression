@@ -6,6 +6,9 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use bit_vector::BitVector;
+use std::io::Error as ioError;
+use std::io::ErrorKind as ioErrorKind;
+use std::io::Result as ioResult;
 use std::io::Write as ioWrite;
 use write::Write;
 
@@ -33,16 +36,14 @@ impl<W: ioWrite> LeftBitWriter<W> {
         self.inner.as_mut().unwrap()
     }
 
-    pub fn into_inner(&mut self) -> Result<W, ::std::io::Error> {
-        match self.flush() {
-            Err(e) => Err(e),
-            Ok(()) => Ok(self.inner.take().unwrap()),
-        }
+    pub fn into_inner(&mut self) -> Result<W, ioError> {
+        try!(self.flush());
+        Ok(self.inner.take().unwrap())
     }
 }
 
 impl<W: ioWrite> Write<BitVector> for LeftBitWriter<W> {
-    fn write(&mut self, data: &BitVector) -> ::std::io::Result<usize> {
+    fn write(&mut self, data: &BitVector) -> ioResult<usize> {
         const BIT_LEN: usize = 32 /* u32 */;
         if data.is_empty() {
             return Ok(0);
@@ -57,8 +58,8 @@ impl<W: ioWrite> Write<BitVector> for LeftBitWriter<W> {
             );
             if let Ok(l) = result {
                 if l == 0 {
-                    return Err(::std::io::Error::new(
-                        ::std::io::ErrorKind::WriteZero,
+                    return Err(ioError::new(
+                        ioErrorKind::WriteZero,
                         "failed to write the data",
                     ));
                 }
@@ -77,13 +78,10 @@ impl<W: ioWrite> Write<BitVector> for LeftBitWriter<W> {
         Ok(r + len)
     }
 
-    fn flush(&mut self) -> ::std::io::Result<()> {
+    fn flush(&mut self) -> ioResult<()> {
         let c = self.counter;
         if c != 8 {
-            let r = self.write(&BitVector::new(0, c));
-            if let Err(e) = r {
-                return Err(e);
-            }
+            try!(self.write(&BitVector::new(0, c)));
         }
         self.inner.as_mut().unwrap().flush()
     }
@@ -122,16 +120,14 @@ impl<W: ioWrite> RightBitWriter<W> {
         self.inner.as_mut().unwrap()
     }
 
-    pub fn into_inner(&mut self) -> Result<W, ::std::io::Error> {
-        match self.flush() {
-            Err(e) => Err(e),
-            Ok(()) => Ok(self.inner.take().unwrap()),
-        }
+    pub fn into_inner(&mut self) -> Result<W, ioError> {
+        try!(self.flush());
+        Ok(self.inner.take().unwrap())
     }
 }
 
 impl<W: ioWrite> Write<BitVector> for RightBitWriter<W> {
-    fn write(&mut self, data: &BitVector) -> ::std::io::Result<usize> {
+    fn write(&mut self, data: &BitVector) -> ioResult<usize> {
         const BIT_LEN: usize = 8 /* u8 */;
         let mut len = data.len();
         let mut data = data.data();
@@ -143,8 +139,8 @@ impl<W: ioWrite> Write<BitVector> for RightBitWriter<W> {
             );
             if let Ok(l) = result {
                 if l == 0 {
-                    return Err(::std::io::Error::new(
-                        ::std::io::ErrorKind::WriteZero,
+                    return Err(ioError::new(
+                        ioErrorKind::WriteZero,
                         "failed to write the data",
                     ));
                 }
@@ -163,13 +159,10 @@ impl<W: ioWrite> Write<BitVector> for RightBitWriter<W> {
         Ok(r + len)
     }
 
-    fn flush(&mut self) -> ::std::io::Result<()> {
+    fn flush(&mut self) -> ioResult<()> {
         let c = self.counter;
         if c != 8 {
-            let r = self.write(&BitVector::new(0, c));
-            if let Err(e) = r {
-                return Err(e);
-            }
+            try!(self.write(&BitVector::new(0, c)));
         }
         self.inner.as_mut().unwrap().flush()
     }
