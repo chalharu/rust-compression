@@ -14,6 +14,7 @@ use std::io::Write as ioWrite;
 use std::mem;
 use std::ops::Index;
 use std::rc::Rc;
+use std::slice;
 use std::u16;
 
 struct HashTab {
@@ -135,7 +136,9 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
             max_pos,
             buf: CircularBuffer::new(size_of_buf),
             pos: CircularBuffer::new(size_of_buf),
-            append_buf: Vec::new(),
+            append_buf: Vec::with_capacity(
+                size_of_buf - max_pos + min_match - 1,
+            ),
             hash_tab: HashTab::new(),
         }
     }
@@ -182,16 +185,28 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
 
     pub fn append(&mut self, data: &[u8]) {
         self.buf.append(&mut data.to_vec());
-        let mut buf = self.append_buf.clone();
         let mm = self.min_match;
-        buf.append(&mut data.to_vec());
+        self.append_buf.append(&mut data.to_vec());
         if self.buf.len() >= self.min_match {
-            for i in 0..(buf.len() - mm + 1) {
-                self.push_pos(&buf[i..(i + mm)]);
+            for i in 0..(self.append_buf.len() - mm + 1) {
+                let v = unsafe {
+                    slice::from_raw_parts(
+                        self.append_buf.as_ptr().offset(i as isize),
+                        mm,
+                    )
+                };
+                self.push_pos(&v);
             }
         }
-        if buf.len() >= self.min_match {
-            self.append_buf = buf[(buf.len() - self.min_match)..].to_vec();
+        if self.append_buf.len() >= self.min_match {
+            let bl = self.min_match - 1;
+            for i in 0..bl {
+                let j = self.append_buf.len() - self.min_match + i;
+                self.append_buf[i] = self.append_buf[j];
+            }
+            unsafe {
+                self.append_buf.set_len(bl);
+            }
         }
     }
 

@@ -74,7 +74,7 @@ impl<W: Write<BitVector> + Clone> LzhufEncoder<W> {
         let mbl_npot = max_block_len.next_power_of_two() >> 1;
         let size_of_offset_freq_buf =
             max(max_block_len - mbl_npot, mbl_npot - 1);
-        let size_of_symbol_freq_buf = max_match + 256 - MIN_MATCH as usize;
+        let size_of_symbol_freq_buf = max_match + 256 - MIN_MATCH as usize + 1;
         Self {
             inner: MultiWriter::new(inner),
             max_block_len,
@@ -341,6 +341,7 @@ impl<W: Write<BitVector> + Clone> Write<LzssCode> for LzhufEncoder<W> {
         if !self.block_buf.is_empty() {
             self.write_block();
         }
+        self.inner.flush();
 
         Ok(())
     }
