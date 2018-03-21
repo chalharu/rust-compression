@@ -60,7 +60,7 @@ script:
 - cargo test --release --no-run --features="$FEATURES"
 - |
   if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-    cargo kcov --features="$FEATURES" -- --coveralls-id=$TRAVIS_JOB_ID
+    cargo kcov --features "$FEATURES" -- --coveralls-id=$TRAVIS_JOB_ID
   else
     cargo test --features="$FEATURES"
   fi
