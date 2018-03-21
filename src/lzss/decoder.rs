@@ -63,7 +63,6 @@ mod tests {
     use alloc::vec::Vec;
     use lzss::encoder::LzssEncoder;
     use lzss::tests::comparison;
-    use rand::{Rng, SeedableRng, XorShiftRng};
 
     #[test]
     fn test() {
