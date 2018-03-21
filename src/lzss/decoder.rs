@@ -84,32 +84,4 @@ mod tests {
 
         assert_eq!(testvec.to_vec(), ret);
     }
-
-    fn test_rand_with_len(len: usize) {
-        let mut rng = XorShiftRng::from_seed([
-            189_522_394,
-            1_694_417_663,
-            1_363_148_323,
-            4_087_496_301,
-        ]);
-
-        let testvec = rng.gen_iter().take(len).collect::<Vec<_>>();
-
-        let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = testvec.clone().into_iter();
-        let enc_ret = (0..)
-            .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
-            .collect::<Vec<_>>();
-
-        let mut decoder = LzssDecoder::new(0x1_0000);
-
-        let mut dec_iter = enc_ret.into_iter().map::<Result<_, ()>, _>(Ok);
-        let ret = (0..)
-            .into_iter()
-            .scan((), |_, _| decoder.next(&mut dec_iter).unwrap())
-            .collect::<Vec<_>>();
-
-        assert_eq!(testvec, ret);
-    }
 }
