@@ -48,9 +48,9 @@ before_script:
   fi
 - |
   if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
-    export FEATURES=""
+    export FEATURES="all"
   else
-    export FEATURES=""
+    export FEATURES="all"
   fi
 
 script:

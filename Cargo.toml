@@ -26,14 +26,15 @@ rand = ">=0.0.0"
 
 [features]
 default = [ "std", "bzip2", "gzip", "deflate", "zlib" ]
+all = [ "bzip2", "gzip", "deflate", "zlib", "lzhuf" ]
 bzip2 = [ ]
 lzhuf = [ ]
 gzip = [ ]
 deflate = [ ]
 zlib = [ ]
 std = [ ]
-docs = [ "std", "bzip2", "gzip", "deflate", "zlib", "lzhuf" ]
-lint = [ "clippy", "bzip2", "gzip", "deflate", "zlib", "lzhuf" ]
+docs = [ "all" ]
+lint = [ "clippy", "all" ]
 
 [badges]
 travis-ci = { repository = "chalharu/rust-compression" }
