@@ -3,3 +3,6 @@ build
 Cargo.lock
 target
 *.bk
+.DS_Store
+*.swp
+

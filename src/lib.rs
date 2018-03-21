@@ -8,40 +8,64 @@
 #![crate_type = "lib"]
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), feature(alloc))]
 
-extern crate num_iter;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate log;
 extern crate num_traits;
+
+#[cfg(feature = "std")]
+extern crate std as core;
+
+#[cfg(not(feature = "std"))]
+#[macro_use(vec)]
+extern crate alloc;
 
 #[cfg(test)]
 extern crate rand;
+#[cfg(test)]
+extern crate simple_logger;
 
-mod bit_vector;
-mod bit_writer;
-mod bit_reader;
-mod huffman_encoder;
-mod huffman_decoder;
-mod internal;
-mod write;
-mod read;
-mod compress;
-mod decompress;
-mod lzhuf_compress;
-mod lzhuf_compression;
-mod io_queue;
-mod lzhuf_decompress;
+mod cbuffer;
+mod action;
+mod error;
+mod bucket_sort;
+mod bitset;
+mod crc32;
+mod adler32;
 
+mod bitio;
+mod suffix_array;
 
-pub use bit_reader::*;
-pub use bit_vector::BitVector;
-pub use bit_writer::*;
-pub use compress::Action;
+mod traits;
+mod huffman;
+mod lzss;
 
-pub use compress::Compress;
-pub use decompress::Decompress;
-pub use huffman_decoder::*;
-pub use huffman_encoder::*;
-use internal::*;
-use io_queue::*;
-pub use lzhuf_compression::LzhufCompression;
-pub use read::Read;
-pub use write::Write;
+mod bzip2;
+mod deflate;
+mod lzhuf;
+
+mod zlib;
+mod gzip;
+
+pub mod prelude {
+    pub use action::Action;
+    pub use bzip2::decoder::BZip2Decoder;
+    pub use bzip2::encoder::BZip2Encoder;
+    pub use bzip2::error::BZip2Error;
+    pub use deflate::decoder::Deflater;
+    pub use deflate::encoder::Inflater;
+    pub use error::CompressionError;
+    pub use gzip::decoder::GZipDecoder;
+    pub use gzip::encoder::GZipEncoder;
+    pub use lzhuf::LzhufMethod;
+    pub use lzhuf::decoder::LzhufDecoder;
+    pub use lzhuf::encoder::LzhufEncoder;
+    pub use traits::decoder::{DecodeExt, DecodeIterator, Decoder};
+    pub use traits::encoder::{EncodeExt, EncodeIterator, Encoder};
+    pub use zlib::decoder::ZlibDecoder;
+    pub use zlib::encoder::ZlibEncoder;
+}

@@ -5,7 +5,7 @@ rust:
 - beta
 - nightly
 
-sudo: false
+sudo: true
 
 os:
 - linux
