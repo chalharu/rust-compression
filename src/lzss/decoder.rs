@@ -21,6 +21,7 @@ impl LzssDecoder {
         }
     }
 
+    #[cfg(feature = "deflate")]
     pub fn with_dict(size_of_window: usize, dict: &[u8]) -> Self {
         let mut buf = CircularBuffer::new(size_of_window);
         buf.append(dict);

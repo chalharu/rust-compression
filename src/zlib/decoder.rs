@@ -8,7 +8,7 @@
 use adler32::Adler32;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::Right;
+use bitio::direction::right::Right;
 use bitio::reader::BitRead;
 use core::hash::Hasher;
 use deflate::decoder::Deflater;

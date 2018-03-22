@@ -4,6 +4,7 @@
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
+#![cfg(any(feature = "bzip2", feature = "deflate", feature = "lzhuf"))]
 
 pub mod cano_huff_table;
 pub mod encoder;
@@ -71,7 +72,9 @@ mod tests {
     use action::Action;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use bitio::{Direction, Left, Right};
+    use bitio::direction::Direction;
+    use bitio::direction::left::Left;
+    use bitio::direction::right::Right;
     use bitio::reader::BitReader;
     use bitio::writer::{BitWriteExt, BitWriter};
     use huffman::decoder::HuffmanDecoder;

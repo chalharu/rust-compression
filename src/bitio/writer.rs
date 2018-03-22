@@ -6,7 +6,7 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use action::Action;
-use bitio::Direction;
+use bitio::direction::Direction;
 use bitio::small_bit_vec::SmallBitVec;
 use core::borrow::BorrowMut;
 use core::marker::PhantomData;
@@ -242,7 +242,8 @@ mod tests {
     use super::*;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use bitio::{Left, Right};
+    use bitio::direction::left::Left;
+    use bitio::direction::right::Right;
 
     #[test]
     fn leftbitwriter_write() {

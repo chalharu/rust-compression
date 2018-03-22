@@ -4,6 +4,7 @@
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
+#![cfg(feature = "deflate")]
 
 pub mod encoder;
 pub mod decoder;
@@ -123,9 +124,9 @@ fn gen_off_tab() -> CodeTable {
 
 #[cfg(test)]
 mod tests {
+    use action::Action;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use action::Action;
     use deflate::decoder::Deflater;
     use deflate::encoder::Inflater;
     use rand::{Rng, SeedableRng, XorShiftRng};

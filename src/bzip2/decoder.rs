@@ -9,7 +9,7 @@
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::Left;
+use bitio::direction::left::Left;
 use bitio::reader::BitRead;
 use bitset::BitArray;
 use bzip2::{HEADER_0, HEADER_h, BZ_G_SIZE, HEADER_B, HEADER_Z};

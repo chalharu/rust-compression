@@ -11,103 +11,12 @@ use alloc::borrow::ToOwned;
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::Direction;
+use bitio::direction::Direction;
 use bitio::small_bit_vec::{SmallBitVec, SmallBitVecReverse};
 use core::marker::PhantomData;
 use core::ops::{Add, Shl};
 use huffman::create_huffman_table;
 use num_traits::{cast, NumCast};
-
-// pub trait HuffmanEncoderExt<I>
-// where
-//     I: Iterator<Item = u8>,
-// {
-//     fn huffman_encode<D, T>(
-//         self,
-//         encoder: &HuffmanEncoder<D, T>,
-//     ) -> HuffmanIterator<I, D, T>
-//     where
-//         D: Direction,
-//         T: Clone
-//             + PartialOrd<T>
-//             + Shl<u8, Output = T>
-//             + Add<Output = T>
-//             + From<u8>,
-//         SmallBitVec<T>: SmallBitVecReverse;
-// }
-
-// impl<I> HuffmanEncoderExt<I::IntoIter> for I
-// where
-//     I: IntoIterator<Item = u8>,
-// {
-//     fn huffman_encode<D, T>(
-//         self,
-//         encoder: &HuffmanEncoder<D, T>,
-//     ) -> HuffmanIterator<I::IntoIter, D, T>
-//     where
-//         D: Direction,
-//         T: Clone
-//             + PartialOrd<T>
-//             + Shl<u8, Output = T>
-//             + Add<Output = T>
-//             + From<u8>,
-//         SmallBitVec<T>: SmallBitVecReverse,
-//     {
-//         HuffmanIterator::new(self.into_iter(), encoder)
-//     }
-// }
-
-// pub struct HuffmanIterator<'a, I, D, T>
-// where
-//     I: Iterator<Item = u8>,
-//     D: 'a + Direction,
-//     T: 'a
-//         + Clone
-//         + PartialOrd<T>
-//         + Shl<u8, Output = T>
-//         + Add<Output = T>
-//         + From<u8>,
-//     SmallBitVec<T>: SmallBitVecReverse,
-// {
-//     encoder: &'a HuffmanEncoder<D, T>,
-//     inner: I,
-// }
-
-// impl<'a, I, D, T> HuffmanIterator<'a, I, D, T>
-// where
-//     I: Iterator<Item = u8>,
-//     D: 'a + Direction,
-//     T: 'a
-//         + Clone
-//         + PartialOrd<T>
-//         + Shl<u8, Output = T>
-//         + Add<Output = T>
-//         + From<u8>,
-//     SmallBitVec<T>: SmallBitVecReverse,
-// {
-//     fn new(inner: I, encoder: &'a HuffmanEncoder<D, T>) -> Self {
-//         Self { encoder, inner }
-//     }
-// }
-
-// impl<'a, I, D, T> Iterator for HuffmanIterator<'a, I, D, T>
-// where
-//     I: Iterator<Item = u8>,
-//     D: 'a + Direction,
-//     T: 'a
-//         + Clone
-//         + PartialOrd<T>
-//         + Shl<u8, Output = T>
-//         + Add<Output = T>
-//         + From<u8>,
-//     SmallBitVec<T>: SmallBitVecReverse,
-// {
-//     type Item = Result<SmallBitVec<T>, String>;
-
-//     fn next(&mut self) -> Option<Result<SmallBitVec<T>, String>> {
-//         self.inner.next().map(|ref x| self.encoder.enc(x))
-//     }
-// }
 
 pub struct HuffmanEncoder<D: Direction, T> {
     bit_vec_tab: Vec<Option<SmallBitVec<T>>>,
@@ -145,7 +54,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitio::{Left, Right};
+    use bitio::direction::left::Left;
+    use bitio::direction::right::Right;
 
     #[test]
     fn lefthuffman_encode_new() {

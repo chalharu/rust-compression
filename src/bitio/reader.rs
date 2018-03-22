@@ -11,7 +11,7 @@ use alloc::borrow::ToOwned;
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::Direction;
+use bitio::direction::Direction;
 use bitio::small_bit_vec::SmallBitVec;
 use cbuffer::CircularBuffer;
 use core::cmp;
@@ -218,7 +218,8 @@ impl<D: Direction, R: Iterator<Item = u8>> BitReader<D, R> {
 mod tests {
     use super::*;
     use action::Action;
-    use bitio::{Left, Right};
+    use bitio::direction::left::Left;
+    use bitio::direction::right::Right;
     use bitio::writer::{BitWriteExt, BitWriter};
 
     #[test]

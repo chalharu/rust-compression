@@ -7,7 +7,7 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::Right;
+use bitio::direction::right::Right;
 use bitio::reader::BitRead;
 use core::hash::{BuildHasher, Hasher};
 use crc32::{BuiltinDigest, IEEE_REVERSE};

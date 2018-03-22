@@ -10,7 +10,8 @@ use action::Action;
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec_deque::VecDeque;
-use bitio::{Direction, Right};
+use bitio::direction::Direction;
+use bitio::direction::right::Right;
 use bitio::small_bit_vec::SmallBitVec;
 use bitio::writer::BitWriter;
 use cbuffer::CircularBuffer;
@@ -587,12 +588,10 @@ impl InflaterInner {
             LzssCode::Symbol(s) => {
                 self.nocomp_buf.push(s);
             }
-            LzssCode::Reference { len, pos } => {
-                for _ in 0..len {
-                    let d = self.nocomp_buf[pos];
-                    self.nocomp_buf.push(d);
-                }
-            }
+            LzssCode::Reference { len, pos } => for _ in 0..len {
+                let d = self.nocomp_buf[pos];
+                self.nocomp_buf.push(d);
+            },
         }
 
         let code = DeflateLzssCode::from_with_codetab(

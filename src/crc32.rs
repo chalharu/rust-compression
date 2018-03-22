@@ -4,19 +4,15 @@
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
+#![cfg(any(feature = "bzip2", feature = "gzip"))]
 
 use core::borrow::Borrow;
 use core::hash::{BuildHasher, Hasher};
 
+#[cfg(any(feature = "gzip", test))]
 lazy_static! {
-    pub static ref IEEE_REVERSE_TABLE: [u32; 256] = {
-        make_table_reverse(0xEDB8_8320)
-    };
-
-    pub static ref IEEE_NORMAL_TABLE: [u32; 256] = {
-        make_table_normal(0x04C1_1DB7)
-    };
-
+    pub static ref IEEE_REVERSE_TABLE: [u32; 256] =
+        { make_table_reverse(0xEDB8_8320) };
     pub static ref IEEE_REVERSE: DigestBuilder<&'static [u32; 256]> = {
         DigestBuilder {
             table: &*IEEE_REVERSE_TABLE,
@@ -24,9 +20,14 @@ lazy_static! {
             poly_repr: PolynomialRepresentation::Reverse,
         }
     };
+}
 
+#[cfg(any(feature = "bzip2"))]
+lazy_static! {
+    pub static ref IEEE_NORMAL_TABLE: [u32; 256] =
+        { make_table_normal(0x04C1_1DB7) };
     pub static ref IEEE_NORMAL: DigestBuilder<&'static [u32; 256]> = {
-        DigestBuilder{
+        DigestBuilder {
             table: &*IEEE_NORMAL_TABLE,
             initial: 0xFFFF_FFFF,
             poly_repr: PolynomialRepresentation::Normal,
@@ -34,6 +35,7 @@ lazy_static! {
     };
 }
 
+#[cfg(any(feature = "gzip", test))]
 fn make_table_reverse(poly: u32) -> [u32; 256] {
     let mut table = [0u32; 256];
     for (i, item) in table.iter_mut().enumerate() {
@@ -50,6 +52,7 @@ fn make_table_reverse(poly: u32) -> [u32; 256] {
     table
 }
 
+#[cfg(any(feature = "bzip2"))]
 fn make_table_normal(poly: u32) -> [u32; 256] {
     let mut table = [0u32; 256];
     for (i, item) in table.iter_mut().enumerate() {
@@ -66,11 +69,13 @@ fn make_table_normal(poly: u32) -> [u32; 256] {
     table
 }
 
+#[cfg(any(feature = "gzip", test))]
 #[inline]
 fn update_reverse(value: u32, table: &[u32; 256], byte: u8) -> u32 {
     table[((value as u8) ^ byte) as usize] ^ (value >> 8)
 }
 
+#[cfg(any(feature = "bzip2"))]
 #[inline]
 fn update_normal(value: u32, table: &[u32; 256], byte: u8) -> u32 {
     table[(((value >> 24) as u8) ^ byte) as usize] ^ (value << 8)
@@ -78,7 +83,9 @@ fn update_normal(value: u32, table: &[u32; 256], byte: u8) -> u32 {
 
 #[derive(Clone, Copy)]
 pub enum PolynomialRepresentation {
+    #[cfg(any(feature = "bzip2"))]
     Normal,
+    #[cfg(any(feature = "gzip", test))]
     Reverse,
 }
 
@@ -117,9 +124,11 @@ impl<T: Borrow<[u32; 256]>> Hasher for Digest<T> {
     #[inline]
     fn write_u8(&mut self, i: u8) {
         self.value = match self.poly_repr {
+            #[cfg(any(feature = "bzip2"))]
             PolynomialRepresentation::Normal => {
                 update_normal(self.value, self.table.borrow(), i)
             }
+            #[cfg(any(feature = "gzip", test))]
             PolynomialRepresentation::Reverse => {
                 update_reverse(self.value, self.table.borrow(), i)
             }

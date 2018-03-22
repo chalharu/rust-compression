@@ -19,6 +19,7 @@ clippy = { version = ">=0.0.0", optional = true }
 num-traits = { version = ">=0.2.0", default-features = false }
 lazy_static = ">0.0.0"
 log = { version = ">=0.0.0", default-features = false }
+cfg-if = ">0.0.0"
 
 [dev-dependencies]
 simple_logger = { version = ">=0.0.0" }
@@ -29,9 +30,9 @@ default = [ "std", "bzip2", "gzip", "deflate", "zlib" ]
 all = [ "bzip2", "gzip", "deflate", "zlib", "lzhuf" ]
 bzip2 = [ ]
 lzhuf = [ ]
-gzip = [ ]
+gzip = [ "deflate" ]
 deflate = [ ]
-zlib = [ ]
+zlib = [ "deflate" ]
 std = [ ]
 docs = [ "all" ]
 lint = [ "clippy", "all" ]

@@ -218,6 +218,7 @@ pub fn make_tab_with_fn<F: Fn(usize, usize) -> usize>(
     }
 }
 
+#[cfg(any(feature = "deflate", feature = "lzhuf", test))]
 pub fn make_table(freq: &[usize], lim: usize) -> Vec<u8> {
     make_tab_with_fn(freq, lim, |x, y| x + y)
 }

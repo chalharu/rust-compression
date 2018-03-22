@@ -12,10 +12,16 @@
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
 #[macro_use]
+extern crate cfg_if;
+extern crate num_traits;
+
+#[cfg(any(feature = "bzip2", feature = "gzip"))]
+#[macro_use]
 extern crate lazy_static;
+
+#[cfg(feature = "bzip2")]
 #[macro_use]
 extern crate log;
-extern crate num_traits;
 
 #[cfg(feature = "std")]
 extern crate std as core;
@@ -53,19 +59,40 @@ mod gzip;
 
 pub mod prelude {
     pub use action::Action;
-    pub use bzip2::decoder::BZip2Decoder;
-    pub use bzip2::encoder::BZip2Encoder;
-    pub use bzip2::error::BZip2Error;
-    pub use deflate::decoder::Deflater;
-    pub use deflate::encoder::Inflater;
+    cfg_if! {
+        if #[cfg(feature = "bzip2")] {
+            pub use bzip2::decoder::BZip2Decoder;
+            pub use bzip2::encoder::BZip2Encoder;
+            pub use bzip2::error::BZip2Error;
+        }
+    }
+
+    cfg_if! {
+        if #[cfg(feature = "deflate")] {
+            pub use deflate::decoder::Deflater;
+            pub use deflate::encoder::Inflater;
+        }
+    }
+    cfg_if! {
+        if #[cfg(feature = "gzip")] {
+            pub use gzip::decoder::GZipDecoder;
+            pub use gzip::encoder::GZipEncoder;
+        }
+    }
+    cfg_if! {
+        if #[cfg(feature = "lzhuf")] {
+            pub use lzhuf::LzhufMethod;
+            pub use lzhuf::decoder::LzhufDecoder;
+            pub use lzhuf::encoder::LzhufEncoder;
+        }
+    }
+    cfg_if! {
+        if #[cfg(feature = "zlib")] {
+            pub use zlib::decoder::ZlibDecoder;
+            pub use zlib::encoder::ZlibEncoder;
+        }
+    }
     pub use error::CompressionError;
-    pub use gzip::decoder::GZipDecoder;
-    pub use gzip::encoder::GZipEncoder;
-    pub use lzhuf::LzhufMethod;
-    pub use lzhuf::decoder::LzhufDecoder;
-    pub use lzhuf::encoder::LzhufEncoder;
     pub use traits::decoder::{DecodeExt, DecodeIterator, Decoder};
     pub use traits::encoder::{EncodeExt, EncodeIterator, Encoder};
-    pub use zlib::decoder::ZlibDecoder;
-    pub use zlib::encoder::ZlibEncoder;
 }

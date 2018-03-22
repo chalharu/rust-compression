@@ -12,7 +12,8 @@ use alloc::string::String;
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec_deque::VecDeque;
-use bitio::{Direction, Left};
+use bitio::direction::Direction;
+use bitio::direction::left::Left;
 use bitio::small_bit_vec::SmallBitVec;
 use bitio::writer::BitWriter;
 use bitset::BitArray;

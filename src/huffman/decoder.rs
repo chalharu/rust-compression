@@ -13,7 +13,7 @@ use alloc::boxed::Box;
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::Direction;
+use bitio::direction::Direction;
 use bitio::reader::BitRead;
 use bitio::small_bit_vec::{SmallBitVec, SmallBitVecReverse};
 use core::cmp;

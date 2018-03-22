@@ -57,6 +57,7 @@ where
         }
     }
 
+    #[cfg(any(feature = "deflate", test))]
     pub fn with_dict(
         comp: F,
         size_of_window: usize,
@@ -116,12 +117,10 @@ where
             }
 
             match lazy_index {
-                s if s < self.min_match => {
-                    for i in (0..s).map(|c| c + 1) {
-                        let c = self.slide[self.offset - i];
-                        self.lzss_queue.push_back(LzssCode::Symbol(c));
-                    }
-                }
+                s if s < self.min_match => for i in (0..s).map(|c| c + 1) {
+                    let c = self.slide[self.offset - i];
+                    self.lzss_queue.push_back(LzssCode::Symbol(c));
+                },
                 _ => self.lzss_queue.push_back(LzssCode::Reference {
                     len: lazy_index,
                     pos: info.pos as usize - 1,

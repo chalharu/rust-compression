@@ -7,7 +7,7 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::Right;
+use bitio::direction::right::Right;
 use bitio::reader::BitRead;
 use deflate::{fix_offset_table, fix_symbol_table, gen_len_tab, gen_off_tab,
               CodeTable};
@@ -137,26 +137,28 @@ impl DeflaterInner {
                         ll.push(last);
                     }
                 }
-                Some(17) => for _ in 0
-                    ..(3
-                        + try!(
-                            reader
-                                .read_bits::<u8>(3)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data())
-                {
-                    ll.push(0);
-                },
-                Some(18) => for _ in 0
-                    ..(11
-                        + try!(
-                            reader
-                                .read_bits::<u8>(7)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data())
-                {
-                    ll.push(0);
-                },
+                Some(17) => {
+                    for _ in
+                        0
+                            ..(3
+                                + try!(reader.read_bits::<u8>(3).map_err(
+                                    |_| CompressionError::UnexpectedEof
+                                )).data())
+                    {
+                        ll.push(0);
+                    }
+                }
+                Some(18) => {
+                    for _ in
+                        0
+                            ..(11
+                                + try!(reader.read_bits::<u8>(7).map_err(
+                                    |_| CompressionError::UnexpectedEof
+                                )).data())
+                    {
+                        ll.push(0);
+                    }
+                }
                 Some(n) => ll.push(n as u8),
             }
         }

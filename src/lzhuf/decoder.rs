@@ -7,7 +7,7 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::Left;
+use bitio::direction::left::Left;
 use bitio::reader::BitRead;
 use error::CompressionError;
 use huffman::decoder::HuffmanDecoder;
@@ -150,26 +150,24 @@ impl LzhufDecoderInner {
                 match try!(len_decoder.dec(reader)) {
                     None => return Err(CompressionError::UnexpectedEof),
                     Some(0) => ll.push(0),
-                    Some(1) => {
-                        for _ in 0
+                    Some(1) => for _ in
+                        0
                             ..(3
                                 + try!(reader.read_bits::<u8>(4).map_err(
                                     |_| CompressionError::UnexpectedEof
                                 )).data())
-                        {
-                            ll.push(0);
-                        }
-                    }
-                    Some(2) => {
-                        for _ in 0
+                    {
+                        ll.push(0);
+                    },
+                    Some(2) => for _ in
+                        0
                             ..(20
                                 + try!(reader.read_bits::<u16>(9).map_err(
                                     |_| CompressionError::UnexpectedEof
                                 )).data())
-                        {
-                            ll.push(0);
-                        }
-                    }
+                    {
+                        ll.push(0);
+                    },
                     Some(n) => ll.push((n - 2) as u8),
                 }
             }

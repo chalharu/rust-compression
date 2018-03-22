@@ -5,7 +5,7 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use bitio::Direction;
+use bitio::direction::Direction;
 use bitio::reader::{BitRead, BitReader};
 use core::marker::PhantomData;
 use error::CompressionError;
