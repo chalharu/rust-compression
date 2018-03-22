@@ -44,7 +44,7 @@ before_script:
   fi
 - cargo install cargo-update || echo "cargo-update already installed"
 - cargo install cargo-travis || echo "cargo-travis already installed"
-- cargo install-update -a # update outdated cached binaries
+- cargo install-update -a || true # update outdated cached binaries
 
 script:
 - cargo build --features="$FEATURES"
@@ -52,10 +52,31 @@ script:
 - cargo build --release --features="$FEATURES"
 - cargo test --release --no-run --features="$FEATURES"
 - |
+  if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
+    cargo build --no-default-features --features="$FEATURES"
+    cargo test --no-run --no-default-features --features="$FEATURES"
+    cargo build --release --no-default-features --features="$FEATURES"
+    cargo test --release --no-run --no-default-features --features="$FEATURES"
+  fi
+- |
   if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-    cargo coveralls --features="$FEATURES"
+    cargo coveralls --features="$FEATURES" || cargo test --features="$FEATURES"
   else
     cargo test --features="$FEATURES"
+  fi
+- |
+  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+    if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
+      cargo coveralls --no-default-features --features="$FEATURES" || cargo test --no-default-features --features="$FEATURES"
+    fi
+  else
+    if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
+      cargo test --no-default-features --features="$FEATURES"
+    fi
+  fi
+- |
+  if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
+    cargo test --release --no-default-features --features="$FEATURES"
   fi
 - cargo test --release --features="$FEATURES"
 - |
