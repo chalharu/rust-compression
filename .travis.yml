@@ -42,9 +42,9 @@ before_script:
   else
     export FEATURES="all"
   fi
-  - cargo install cargo-update || echo "cargo-update already installed"
-  - cargo install cargo-travis || echo "cargo-travis already installed"
-  - cargo install-update -a # update outdated cached binaries
+- cargo install cargo-update || echo "cargo-update already installed"
+- cargo install cargo-travis || echo "cargo-travis already installed"
+- cargo install-update -a # update outdated cached binaries
 
 script:
 - cargo build --features="$FEATURES"
