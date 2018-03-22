@@ -1,9 +1,37 @@
 //! rust-compression
 //!
+//! # Overview
+//! Compression libraries implemented by pure Rust.
+//!
 //! # Licensing
 //! This Source Code is subject to the terms of the Mozilla Public License
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
+//!
+//! # Examples
+//!
+//! ```rust
+//! extern crate compression;
+//! use compression::prelude::*;
+//!
+//! fn main() {
+//!     # #[cfg(feature = "bzip2")]
+//!     let compressed = b"aabbaabbaabbaabb\n"
+//!         .into_iter()
+//!         .cloned()
+//!         .encode(&mut BZip2Encoder::new(9), Action::Finish)
+//!         .collect::<Result<Vec<_>, _>>()
+//!         .unwrap();
+//!
+//!     # #[cfg(feature = "bzip2")]
+//!     let decompressed = compressed
+//!         .iter()
+//!         .cloned()
+//!         .decode(&mut BZip2Decoder::new())
+//!         .collect::<Result<Vec<_>, _>>()
+//!         .unwrap();
+//! }
+//! ```
 
 #![crate_type = "lib"]
 #![cfg_attr(feature = "clippy", feature(plugin))]
