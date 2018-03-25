@@ -26,13 +26,14 @@ simple_logger = { version = ">=0.0.0" }
 rand = ">=0.0.0"
 
 [features]
-default = [ "std", "bzip2", "gzip", "deflate", "zlib" ]
-all = [ "bzip2", "gzip", "deflate", "zlib", "lzhuf" ]
+default = [ "std", "bzip2", "gzip", "deflate", "zlib", "lz4" ]
+all = [ "bzip2", "gzip", "deflate", "zlib", "lzhuf", "lz4" ]
 bzip2 = [ ]
 lzhuf = [ ]
 gzip = [ "deflate" ]
 deflate = [ ]
 zlib = [ "deflate" ]
+lz4 = []
 std = [ ]
 docs = [ "all" ]
 lint = [ "clippy", "all" ]

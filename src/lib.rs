@@ -81,6 +81,7 @@ mod lzss;
 mod bzip2;
 mod deflate;
 mod lzhuf;
+mod lz4;
 
 mod zlib;
 mod gzip;
