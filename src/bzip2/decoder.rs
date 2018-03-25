@@ -548,15 +548,14 @@ impl BZip2Decoder {
     }
 }
 
-impl Decoder for BZip2Decoder {
+impl<R> Decoder<R> for BZip2Decoder
+where
+    R: BitRead<Left>,
+{
     type Error = BZip2Error;
-    type Direction = Left;
-    type Item = u8;
+    type Output = u8;
 
-    fn next<R: BitRead<Self::Direction>>(
-        &mut self,
-        iter: &mut R,
-    ) -> Result<Option<u8>, Self::Error> {
+    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
         if self.result_count == self.result_wrote_count {
             if self.n_block_used == self.tt.len()
                 && !try!(self.init_block(iter))
