@@ -27,9 +27,8 @@ impl LzhufHuffmanDecoder {
         reader: &mut R,
     ) -> Result<Option<u16>, CompressionError> {
         match *self {
-            LzhufHuffmanDecoder::HuffmanDecoder(ref mut hd) => {
-                hd.dec(reader).map_err(|_| CompressionError::DataError)
-            }
+            LzhufHuffmanDecoder::HuffmanDecoder(ref mut hd) => hd.dec(reader)
+                .map_err(|_| CompressionError::DataError),
             LzhufHuffmanDecoder::Default(s) => Ok(Some(s)),
         }
     }
@@ -235,11 +234,14 @@ impl LzhufDecoderInner {
     }
 }
 
-impl Decoder for LzhufDecoderInner {
-    type Item = LzssCode;
+impl<R> Decoder<R> for LzhufDecoderInner
+where
+    R: BitRead<Left>,
+{
     type Error = CompressionError;
-    type Direction = Left;
-    fn next<R: BitRead<Left>>(
+    type Output = LzssCode;
+
+    fn next(
         &mut self,
         reader: &mut R,
     ) -> Result<Option<LzssCode>, CompressionError> {
@@ -248,16 +250,24 @@ impl Decoder for LzhufDecoderInner {
         }
         self.block_len -= 1;
         let sym = try!(
-            try!(self.symbol_decoder.as_mut().unwrap().dec(reader))
-                .ok_or_else(|| CompressionError::UnexpectedEof)
+            try!(
+                self.symbol_decoder
+                    .as_mut()
+                    .unwrap()
+                    .dec(reader)
+            ).ok_or_else(|| CompressionError::UnexpectedEof)
         ) as usize;
         if sym <= 255 {
             Ok(Some(LzssCode::Symbol(sym as u8)))
         } else {
             let len = sym - 256 + self.min_match;
             let mut pos = try!(
-                try!(self.offset_decoder.as_mut().unwrap().dec(reader))
-                    .ok_or_else(|| CompressionError::UnexpectedEof)
+                try!(
+                    self.offset_decoder
+                        .as_mut()
+                        .unwrap()
+                        .dec(reader)
+                ).ok_or_else(|| CompressionError::UnexpectedEof)
             ) as usize;
             if pos > 1 {
                 pos = (1 << (pos - 1))
@@ -288,15 +298,15 @@ impl LzhufDecoder {
     }
 }
 
-impl Decoder for LzhufDecoder {
+impl<R> Decoder<R> for LzhufDecoder
+where
+    R: BitRead<Left>,
+{
     type Error = CompressionError;
-    type Direction = Left;
-    type Item = u8;
+    type Output = u8;
 
-    fn next<R: BitRead<Self::Direction>>(
-        &mut self,
-        iter: &mut R,
-    ) -> Result<Option<u8>, Self::Error> {
-        self.lzss_decoder.next(&mut self.inner.iter(iter))
+    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+        self.lzss_decoder
+            .next(&mut self.inner.iter(iter))
     }
 }

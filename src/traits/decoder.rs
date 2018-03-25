@@ -6,76 +6,78 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use bitio::direction::Direction;
-use bitio::reader::{BitRead, BitReader};
+use bitio::reader::BitReader;
+use core::borrow::BorrowMut;
 use core::marker::PhantomData;
 use error::CompressionError;
 
-pub trait DecodeExt<I>
+pub trait DecodeExt<I, R>
 where
     I: Iterator<Item = u8>,
 {
-    fn decode<D: Direction, E: Decoder<Direction = D>>(
-        self,
-        decoder: &mut E,
-    ) -> DecodeIterator<I, D, E>
+    fn decode<E: Decoder<R>>(self, decoder: &mut E) -> DecodeIterator<R, E, R>
     where
         CompressionError: From<E::Error>;
 }
 
-impl<I> DecodeExt<I::IntoIter> for I
+impl<I, D> DecodeExt<I::IntoIter, BitReader<D, I::IntoIter>> for I
 where
+    D: Direction,
     I: IntoIterator<Item = u8>,
 {
-    fn decode<D: Direction, E: Decoder<Direction = D>>(
+    fn decode<E: Decoder<BitReader<D, I::IntoIter>>>(
         self,
         decoder: &mut E,
-    ) -> DecodeIterator<I::IntoIter, D, E>
+    ) -> DecodeIterator<BitReader<D, I::IntoIter>, E, BitReader<D, I::IntoIter>>
     where
+        D: Direction,
+        E: Decoder<BitReader<D, I::IntoIter>>,
         CompressionError: From<E::Error>,
     {
-        DecodeIterator::<I::IntoIter, D, E>::new(self.into_iter(), decoder)
+        DecodeIterator::<
+            BitReader<D, I::IntoIter>,
+            E,
+            BitReader<D, I::IntoIter>,
+        >::new(BitReader::<D, _>::new(self.into_iter()), decoder)
     }
 }
 
-pub struct DecodeIterator<'a, I, D, E>
+pub struct DecodeIterator<'a, R, E, B>
 where
-    I: Iterator<Item = u8>,
-    D: Direction,
-    E: Decoder<Direction = D> + 'a,
+    E: Decoder<R> + 'a,
+    B: BorrowMut<R>,
     CompressionError: From<E::Error>,
 {
     decoder: &'a mut E,
-    inner: BitReader<D, I>,
-    phantom: PhantomData<E>,
+    inner: B,
+    phantom: PhantomData<fn() -> R>,
 }
 
-impl<'a, I, D, E> DecodeIterator<'a, I, D, E>
+impl<'a, R, E, B> DecodeIterator<'a, R, E, B>
 where
-    I: Iterator<Item = u8>,
-    D: Direction,
-    E: Decoder<Direction = D>,
+    E: Decoder<R>,
+    B: BorrowMut<R>,
     CompressionError: From<E::Error>,
 {
-    fn new(inner: I, decoder: &'a mut E) -> Self {
+    fn new(inner: B, decoder: &'a mut E) -> Self {
         Self {
             decoder,
-            inner: BitReader::<_, _>::new(inner),
+            inner,
             phantom: PhantomData,
         }
     }
 }
 
-impl<'a, I, D, E> Iterator for DecodeIterator<'a, I, D, E>
+impl<'a, R, E, B> Iterator for DecodeIterator<'a, R, E, B>
 where
-    I: Iterator<Item = u8>,
-    D: Direction,
-    E: Decoder<Direction = D>,
+    E: Decoder<R>,
+    B: BorrowMut<R>,
     CompressionError: From<E::Error>,
 {
-    type Item = Result<E::Item, E::Error>;
+    type Item = Result<E::Output, E::Error>;
 
-    fn next(&mut self) -> Option<Result<E::Item, E::Error>> {
-        match self.decoder.next(&mut self.inner) {
+    fn next(&mut self) -> Option<Result<E::Output, E::Error>> {
+        match self.decoder.next(&mut self.inner.borrow_mut()) {
             Ok(Some(s)) => Some(Ok(s)),
             Ok(None) => None,
             Err(s) => Some(Err(s)),
@@ -83,56 +85,28 @@ where
     }
 }
 
-pub trait Decoder
+pub trait Decoder<R>
 where
     CompressionError: From<Self::Error>,
 {
     type Error;
-    type Direction: Direction;
-    type Item;
-    fn next<R: BitRead<Self::Direction>>(
+    type Output;
+    fn next(
         &mut self,
         iter: &mut R,
-    ) -> Result<Option<Self::Item>, Self::Error>;
+    ) -> Result<Option<Self::Output>, Self::Error>;
 
-    fn iter<'a, R: BitRead<Self::Direction>>(
+    fn iter<'a>(
         &'a mut self,
         reader: &'a mut R,
-    ) -> DecoderChainIterator<Self::Direction, Self, R, Self::Item>
+    ) -> DecodeIterator<R, Self, &'a mut R>
     where
         Self: Sized,
     {
-        DecoderChainIterator {
-            inner: self,
-            reader,
-        }
-    }
-}
-
-pub struct DecoderChainIterator<'a, D, E, R, I>
-where
-    D: Direction,
-    E: Decoder<Direction = D, Item = I> + 'a,
-    R: BitRead<D> + 'a,
-    CompressionError: From<E::Error>,
-{
-    inner: &'a mut E,
-    reader: &'a mut R,
-}
-
-impl<'a, D, E, R, I> Iterator for DecoderChainIterator<'a, D, E, R, I>
-where
-    D: Direction,
-    E: Decoder<Direction = D, Item = I> + 'a,
-    R: BitRead<D> + 'a,
-    CompressionError: From<E::Error>,
-{
-    type Item = Result<E::Item, E::Error>;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.inner.next(self.reader) {
-            Ok(Some(s)) => Some(Ok(s)),
-            Ok(None) => None,
-            Err(e) => Some(Err(e)),
+        DecodeIterator {
+            decoder: self,
+            inner: reader,
+            phantom: PhantomData,
         }
     }
 }

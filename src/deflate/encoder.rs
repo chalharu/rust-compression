@@ -588,10 +588,12 @@ impl InflaterInner {
             LzssCode::Symbol(s) => {
                 self.nocomp_buf.push(s);
             }
-            LzssCode::Reference { len, pos } => for _ in 0..len {
-                let d = self.nocomp_buf[pos];
-                self.nocomp_buf.push(d);
-            },
+            LzssCode::Reference { len, pos } => {
+                for _ in 0..len {
+                    let d = self.nocomp_buf[pos];
+                    self.nocomp_buf.push(d);
+                }
+            }
         }
 
         let code = DeflateLzssCode::from_with_codetab(
