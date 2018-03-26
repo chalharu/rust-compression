@@ -55,6 +55,7 @@ extern crate log;
 extern crate std as core;
 
 #[cfg(feature = "lz4")]
+#[cfg(not(any(feature = "deflate", feature = "lzhuf", feature = "bzip2")))]
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
