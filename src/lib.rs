@@ -47,13 +47,18 @@ extern crate num_traits;
 #[macro_use]
 extern crate lazy_static;
 
-#[cfg(feature = "bzip2")]
+#[cfg(any(feature = "bzip2", feature = "lz4"))]
 #[macro_use]
 extern crate log;
 
 #[cfg(feature = "std")]
 extern crate std as core;
 
+#[cfg(feature = "lz4")]
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(any(feature = "deflate", feature = "lzhuf", feature = "bzip2"))]
 #[cfg(not(feature = "std"))]
 #[macro_use(vec)]
 extern crate alloc;
@@ -71,10 +76,11 @@ mod bitset;
 mod crc32;
 mod adler32;
 
-mod bitio;
+mod traits;
 mod suffix_array;
 
-mod traits;
+mod bitio;
+
 mod huffman;
 mod lzss;
 
@@ -119,6 +125,11 @@ pub mod prelude {
         if #[cfg(feature = "zlib")] {
             pub use zlib::decoder::ZlibDecoder;
             pub use zlib::encoder::ZlibEncoder;
+        }
+    }
+    cfg_if! {
+        if #[cfg(feature = "lz4")] {
+            pub use lz4::decoder::Lz4Decoder;
         }
     }
     pub use error::CompressionError;

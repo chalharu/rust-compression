@@ -20,6 +20,7 @@ use core::marker::PhantomData;
 use core::mem::size_of;
 use core::ops::{BitOrAssign, Shl, Shr};
 use num_traits::sign::Unsigned;
+use traits::decoder::Reader;
 
 pub trait BitRead<D: Direction> {
     type Iter;
@@ -211,6 +212,12 @@ impl<D: Direction, R: Iterator<Item = u8>> BitReader<D, R> {
         T: Shl<usize, Output = T> + Shr<usize, Output = T> + From<u8>,
     {
         D::convert(T::from(value), size_of::<u8>() << 3, size_of::<T>() << 3)
+    }
+}
+
+impl<T: Iterator<Item = u8>, D: Direction> Reader<T> for BitReader<D, T> {
+    fn get_reader(value: T) -> Self {
+        BitReader::new(value)
     }
 }
 

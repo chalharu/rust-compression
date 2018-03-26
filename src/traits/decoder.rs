@@ -5,8 +5,6 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use bitio::direction::Direction;
-use bitio::reader::BitReader;
 use core::borrow::BorrowMut;
 use core::marker::PhantomData;
 use error::CompressionError;
@@ -47,12 +45,6 @@ pub trait Reader<T> {
 impl<T> Reader<T> for T {
     fn get_reader(value: T) -> Self {
         value
-    }
-}
-
-impl<T: Iterator<Item = u8>, D: Direction> Reader<T> for BitReader<D, T> {
-    fn get_reader(value: T) -> Self {
-        BitReader::new(value)
     }
 }
 
