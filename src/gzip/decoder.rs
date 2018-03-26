@@ -8,7 +8,7 @@
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::right::Right;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use core::hash::{BuildHasher, Hasher};
 use crc32::{BuiltinDigest, IEEE_REVERSE};
 use deflate::decoder::Deflater;
@@ -60,14 +60,18 @@ impl GZipDecoder {
     }
 }
 
-impl<R> Decoder<R> for GZipDecoder
+impl<I> Decoder<I> for GZipDecoder
 where
-    R: BitRead<Right>,
+    I: Iterator<Item = u8>,
 {
     type Error = CompressionError;
     type Output = u8;
+    type Reader = BitReader<Right, I>;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+    fn next(
+        &mut self,
+        iter: &mut Self::Reader,
+    ) -> Result<Option<u8>, Self::Error> {
         loop {
             if !self.header_checked {
                 if self.header.len() < self.header_needlen {

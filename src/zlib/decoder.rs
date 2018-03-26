@@ -9,7 +9,7 @@ use adler32::Adler32;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::right::Right;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use core::hash::Hasher;
 use deflate::decoder::Deflater;
 use error::CompressionError;
@@ -51,14 +51,18 @@ impl ZlibDecoder {
     }
 }
 
-impl<R> Decoder<R> for ZlibDecoder
+impl<I> Decoder<I> for ZlibDecoder
 where
-    R: BitRead<Right>,
+    I: Iterator<Item = u8>,
 {
     type Error = CompressionError;
     type Output = u8;
+    type Reader = BitReader<Right, I>;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+    fn next(
+        &mut self,
+        iter: &mut Self::Reader,
+    ) -> Result<Option<u8>, Self::Error> {
         loop {
             if !self.header_checked {
                 let s = try!(

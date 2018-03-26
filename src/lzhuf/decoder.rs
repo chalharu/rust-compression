@@ -8,7 +8,7 @@
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::left::Left;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use error::CompressionError;
 use huffman::decoder::HuffmanDecoder;
 use lzhuf::{LzhufMethod, LZSS_MIN_MATCH};
@@ -149,24 +149,26 @@ impl LzhufDecoderInner {
                 match try!(len_decoder.dec(reader)) {
                     None => return Err(CompressionError::UnexpectedEof),
                     Some(0) => ll.push(0),
-                    Some(1) => for _ in
-                        0
+                    Some(1) => {
+                        for _ in 0
                             ..(3
                                 + try!(reader.read_bits::<u8>(4).map_err(
                                     |_| CompressionError::UnexpectedEof
                                 )).data())
-                    {
-                        ll.push(0);
-                    },
-                    Some(2) => for _ in
-                        0
+                        {
+                            ll.push(0);
+                        }
+                    }
+                    Some(2) => {
+                        for _ in 0
                             ..(20
                                 + try!(reader.read_bits::<u16>(9).map_err(
                                     |_| CompressionError::UnexpectedEof
                                 )).data())
-                    {
-                        ll.push(0);
-                    },
+                        {
+                            ll.push(0);
+                        }
+                    }
                     Some(n) => ll.push((n - 2) as u8),
                 }
             }
@@ -234,16 +236,17 @@ impl LzhufDecoderInner {
     }
 }
 
-impl<R> Decoder<R> for LzhufDecoderInner
+impl<I> Decoder<I> for LzhufDecoderInner
 where
-    R: BitRead<Left>,
+    I: Iterator<Item = u8>,
 {
     type Error = CompressionError;
     type Output = LzssCode;
+    type Reader = BitReader<Left, I>;
 
     fn next(
         &mut self,
-        reader: &mut R,
+        reader: &mut Self::Reader,
     ) -> Result<Option<LzssCode>, CompressionError> {
         if self.block_len == 0 && !try!(self.init_block(reader)) {
             return Ok(None);
@@ -298,14 +301,18 @@ impl LzhufDecoder {
     }
 }
 
-impl<R> Decoder<R> for LzhufDecoder
+impl<I> Decoder<I> for LzhufDecoder
 where
-    R: BitRead<Left>,
+    I: Iterator<Item = u8>,
 {
     type Error = CompressionError;
     type Output = u8;
+    type Reader = BitReader<Left, I>;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+    fn next(
+        &mut self,
+        iter: &mut Self::Reader,
+    ) -> Result<Option<u8>, Self::Error> {
         self.lzss_decoder
             .next(&mut self.inner.iter(iter))
     }

@@ -11,52 +11,66 @@ use core::borrow::BorrowMut;
 use core::marker::PhantomData;
 use error::CompressionError;
 
-pub trait DecodeExt<I, R>
+pub trait DecodeExt<I>
 where
     I: Iterator<Item = u8>,
 {
-    fn decode<E: Decoder<R>>(self, decoder: &mut E) -> DecodeIterator<R, E, R>
+    fn decode<E>(self, decoder: &mut E) -> DecodeIterator<I, E, E::Reader>
     where
+        E: Decoder<I>,
         CompressionError: From<E::Error>;
 }
 
-impl<I, D> DecodeExt<I::IntoIter, BitReader<D, I::IntoIter>> for I
+impl<I> DecodeExt<I::IntoIter> for I
 where
-    D: Direction,
     I: IntoIterator<Item = u8>,
 {
-    fn decode<E: Decoder<BitReader<D, I::IntoIter>>>(
+    fn decode<E>(
         self,
         decoder: &mut E,
-    ) -> DecodeIterator<BitReader<D, I::IntoIter>, E, BitReader<D, I::IntoIter>>
+    ) -> DecodeIterator<I::IntoIter, E, E::Reader>
     where
-        D: Direction,
-        E: Decoder<BitReader<D, I::IntoIter>>,
+        E: Decoder<I::IntoIter>,
         CompressionError: From<E::Error>,
     {
-        DecodeIterator::<
-            BitReader<D, I::IntoIter>,
-            E,
-            BitReader<D, I::IntoIter>,
-        >::new(BitReader::<D, _>::new(self.into_iter()), decoder)
+        DecodeIterator::<I::IntoIter, E, E::Reader>::new(
+            E::Reader::get_reader(self.into_iter()),
+            decoder,
+        )
     }
 }
 
-pub struct DecodeIterator<'a, R, E, B>
+pub trait Reader<T> {
+    fn get_reader(value: T) -> Self;
+}
+
+impl<T> Reader<T> for T {
+    fn get_reader(value: T) -> Self {
+        value
+    }
+}
+
+impl<T: Iterator<Item = u8>, D: Direction> Reader<T> for BitReader<D, T> {
+    fn get_reader(value: T) -> Self {
+        BitReader::new(value)
+    }
+}
+
+pub struct DecodeIterator<'a, I, E, B>
 where
-    E: Decoder<R> + 'a,
-    B: BorrowMut<R>,
+    E: Decoder<I> + 'a,
+    B: BorrowMut<E::Reader>,
     CompressionError: From<E::Error>,
 {
     decoder: &'a mut E,
     inner: B,
-    phantom: PhantomData<fn() -> R>,
+    phantom: PhantomData<fn() -> I>,
 }
 
-impl<'a, R, E, B> DecodeIterator<'a, R, E, B>
+impl<'a, I, E, B> DecodeIterator<'a, I, E, B>
 where
-    E: Decoder<R>,
-    B: BorrowMut<R>,
+    E: Decoder<I>,
+    B: BorrowMut<E::Reader>,
     CompressionError: From<E::Error>,
 {
     fn new(inner: B, decoder: &'a mut E) -> Self {
@@ -68,16 +82,16 @@ where
     }
 }
 
-impl<'a, R, E, B> Iterator for DecodeIterator<'a, R, E, B>
+impl<'a, I, E, B> Iterator for DecodeIterator<'a, I, E, B>
 where
-    E: Decoder<R>,
-    B: BorrowMut<R>,
+    E: Decoder<I>,
+    B: BorrowMut<E::Reader>,
     CompressionError: From<E::Error>,
 {
     type Item = Result<E::Output, E::Error>;
 
     fn next(&mut self) -> Option<Result<E::Output, E::Error>> {
-        match self.decoder.next(&mut self.inner.borrow_mut()) {
+        match self.decoder.next(self.inner.borrow_mut()) {
             Ok(Some(s)) => Some(Ok(s)),
             Ok(None) => None,
             Err(s) => Some(Err(s)),
@@ -85,21 +99,24 @@ where
     }
 }
 
-pub trait Decoder<R>
+pub trait Decoder<I>
 where
     CompressionError: From<Self::Error>,
+    Self::Reader: Reader<I>,
 {
     type Error;
     type Output;
+    type Reader;
+
     fn next(
         &mut self,
-        iter: &mut R,
+        iter: &mut Self::Reader,
     ) -> Result<Option<Self::Output>, Self::Error>;
 
     fn iter<'a>(
         &'a mut self,
-        reader: &'a mut R,
-    ) -> DecodeIterator<R, Self, &'a mut R>
+        reader: &'a mut Self::Reader,
+    ) -> DecodeIterator<I, Self, &'a mut Self::Reader>
     where
         Self: Sized,
     {

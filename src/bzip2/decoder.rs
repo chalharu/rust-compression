@@ -10,7 +10,7 @@ use alloc::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::left::Left;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use bitset::BitArray;
 use bzip2::{HEADER_0, HEADER_h, BZ_G_SIZE, HEADER_B, HEADER_Z};
 use bzip2::error::BZip2Error;
@@ -65,7 +65,10 @@ struct BlockRandomise {
 
 impl BlockRandomise {
     pub fn new() -> Self {
-        Self { n2go: 0, t_pos: 0 }
+        Self {
+            n2go: 0,
+            t_pos: 0,
+        }
     }
 
     pub fn reset(&mut self) {
@@ -274,13 +277,17 @@ impl BZip2Decoder {
 
                 /*--- Now the selectors ---*/
                 let n_groups = try!(
-                    reader.read_bits(3).map_err(|_| BZip2Error::UnexpectedEof)
+                    reader
+                        .read_bits(3)
+                        .map_err(|_| BZip2Error::UnexpectedEof)
                 ).data();
                 if n_groups < 2 || n_groups > 6 {
                     return Err(BZip2Error::DataError);
                 }
                 let n_selectors = try!(
-                    reader.read_bits(15).map_err(|_| BZip2Error::UnexpectedEof)
+                    reader
+                        .read_bits(15)
+                        .map_err(|_| BZip2Error::UnexpectedEof)
                 ).data();
                 if n_selectors < 1 {
                     return Err(BZip2Error::DataError);
@@ -541,21 +548,29 @@ impl BZip2Decoder {
         self.t_pos = position >> 8;
         self.n_block_used += 1;
         if self.block_randomised {
-            k0 ^= if self.block_randomise.next() { 1 } else { 0 };
+            k0 ^= if self.block_randomise.next() {
+                1
+            } else {
+                0
+            };
         }
 
         Ok(k0)
     }
 }
 
-impl<R> Decoder<R> for BZip2Decoder
+impl<I> Decoder<I> for BZip2Decoder
 where
-    R: BitRead<Left>,
+    I: Iterator<Item = u8>,
 {
     type Error = BZip2Error;
     type Output = u8;
+    type Reader = BitReader<Left, I>;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+    fn next(
+        &mut self,
+        iter: &mut Self::Reader,
+    ) -> Result<Option<u8>, Self::Error> {
         if self.result_count == self.result_wrote_count {
             if self.n_block_used == self.tt.len()
                 && !try!(self.init_block(iter))
@@ -579,7 +594,8 @@ where
         } else {
             self.result_wrote_count += 1;
         }
-        self.block_crc_digest.write_u8(self.result_charactor);
+        self.block_crc_digest
+            .write_u8(self.result_charactor);
         Ok(Some(self.result_charactor))
     }
 }

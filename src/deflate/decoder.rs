@@ -8,7 +8,7 @@
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::right::Right;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use deflate::{fix_offset_table, fix_symbol_table, gen_len_tab, gen_off_tab,
               CodeTable};
 use error::CompressionError;
@@ -266,16 +266,17 @@ impl DeflaterInner {
     }
 }
 
-impl<R> Decoder<R> for DeflaterInner
+impl<I> Decoder<I> for DeflaterInner
 where
-    R: BitRead<Right>,
+    I: Iterator<Item = u8>,
 {
     type Error = CompressionError;
     type Output = LzssCode;
+    type Reader = BitReader<Right, I>;
 
     fn next(
         &mut self,
-        reader: &mut R,
+        reader: &mut Self::Reader,
     ) -> Result<Option<LzssCode>, CompressionError> {
         loop {
             if self.symbol_decoder
@@ -286,9 +287,12 @@ where
                     return Ok(None);
                 }
                 try!(self.init_block(reader));
-            } else if let Some(sym) =
-                try!(self.symbol_decoder.as_mut().unwrap().dec(reader))
-            {
+            } else if let Some(sym) = try!(
+                self.symbol_decoder
+                    .as_mut()
+                    .unwrap()
+                    .dec(reader)
+            ) {
                 if sym <= 255 {
                     return Ok(Some(LzssCode::Symbol(sym as u8)));
                 } else {
@@ -306,8 +310,12 @@ where
                             },
                         ) + 3) as usize;
                     let off_index = try!(
-                        try!(self.offset_decoder.as_mut().unwrap().dec(reader))
-                            .ok_or_else(|| CompressionError::UnexpectedEof)
+                        try!(
+                            self.offset_decoder
+                                .as_mut()
+                                .unwrap()
+                                .dec(reader)
+                        ).ok_or_else(|| CompressionError::UnexpectedEof)
                     ) as usize;
                     let off_extbits = (&self.offset_tab).ext_bits(off_index);
                     let pos =
@@ -357,14 +365,19 @@ impl Deflater {
     }
 }
 
-impl<R> Decoder<R> for Deflater
+impl<I> Decoder<I> for Deflater
 where
-    R: BitRead<Right>,
+    I: Iterator<Item = u8>,
 {
     type Error = CompressionError;
     type Output = u8;
+    type Reader = BitReader<Right, I>;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
-        self.lzss_decoder.next(&mut self.inner.iter(iter))
+    fn next(
+        &mut self,
+        iter: &mut Self::Reader,
+    ) -> Result<Option<u8>, Self::Error> {
+        self.lzss_decoder
+            .next(&mut self.inner.iter(iter))
     }
 }
