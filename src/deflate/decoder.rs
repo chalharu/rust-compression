@@ -97,17 +97,14 @@ impl DeflaterInner {
         ];
         let mut len_list = vec![0; 19];
         for &i in len_index.into_iter().take(hclen as usize) {
-            len_list[i] = *try!(
-                reader
-                    .read_bits(3)
-                    .map_err(|_| CompressionError::UnexpectedEof)
-            ).data_ref();
+            len_list[i] = *reader
+                .read_bits(3)
+                .map_err(|_| CompressionError::UnexpectedEof)?
+                .data_ref();
         }
         Ok(DeflateHuffmanDecoder::HuffmanDecoder(
-            try!(
-                HuffmanDecoder::new(&len_list, Self::SEARCH_TAB_LEN,)
-                    .map_err(|_| CompressionError::DataError)
-            ),
+            HuffmanDecoder::new(&len_list, Self::SEARCH_TAB_LEN)
+                .map_err(|_| CompressionError::DataError)?,
             false,
         ))
     }
@@ -120,40 +117,37 @@ impl DeflaterInner {
     ) -> Result<DeflateHuffmanDecoder, CompressionError> {
         let mut ll = Vec::new();
         while ll.len() < len {
-            match try!(len_decoder.dec(reader)) {
+            match len_decoder.dec(reader)? {
                 None => return Err(CompressionError::UnexpectedEof),
                 Some(16) => {
-                    let last = try!(ll.iter().last().map_or_else(
+                    let last = ll.iter().last().map_or_else(
                         || Err(CompressionError::UnexpectedEof),
                         |&l| Ok(l),
-                    ));
+                    )?;
                     for _ in 0
-                        ..(try!(
-                            reader
-                                .read_bits::<u8>(2)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data() + 3)
+                        ..(reader
+                            .read_bits::<u8>(2)
+                            .map_err(|_| CompressionError::UnexpectedEof)?
+                            .data() + 3)
                     {
                         ll.push(last);
                     }
                 }
                 Some(17) => for _ in 0
                     ..(3
-                        + try!(
-                            reader
-                                .read_bits::<u8>(3)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data())
+                        + reader
+                            .read_bits::<u8>(3)
+                            .map_err(|_| CompressionError::UnexpectedEof)?
+                            .data())
                 {
                     ll.push(0);
                 },
                 Some(18) => for _ in 0
                     ..(11
-                        + try!(
-                            reader
-                                .read_bits::<u8>(7)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data())
+                        + reader
+                            .read_bits::<u8>(7)
+                            .map_err(|_| CompressionError::UnexpectedEof)?
+                            .data())
                 {
                     ll.push(0);
                 },
@@ -161,10 +155,8 @@ impl DeflaterInner {
             }
         }
         Ok(DeflateHuffmanDecoder::HuffmanDecoder(
-            try!(
-                HuffmanDecoder::new(&ll, Self::SEARCH_TAB_LEN,)
-                    .map_err(|_| CompressionError::DataError)
-            ),
+            HuffmanDecoder::new(&ll, Self::SEARCH_TAB_LEN)
+                .map_err(|_| CompressionError::DataError)?,
             false,
         ))
     }
@@ -173,30 +165,26 @@ impl DeflaterInner {
         &mut self,
         reader: &mut R,
     ) -> Result<(), CompressionError> {
-        self.is_final = try!(
-            reader
-                .read_bits::<u8>(1)
-                .map_err(|_| CompressionError::UnexpectedEof)
-        ).data() == 1;
-        match try!(
-            reader
-                .read_bits::<u8>(2)
-                .map_err(|_| CompressionError::UnexpectedEof)
-        ).data()
+        self.is_final = reader
+            .read_bits::<u8>(1)
+            .map_err(|_| CompressionError::UnexpectedEof)?
+            .data() == 1;
+        match reader
+            .read_bits::<u8>(2)
+            .map_err(|_| CompressionError::UnexpectedEof)?
+            .data()
         {
             // 無圧縮
             0 => {
                 reader.skip_to_next_byte();
-                let block_len = try!(
-                    reader
-                        .read_bits(16)
-                        .map_err(|_| CompressionError::UnexpectedEof)
-                ).data();
-                let block_len_checksum = try!(
-                    reader
-                        .read_bits::<u32>(16)
-                        .map_err(|_| CompressionError::UnexpectedEof)
-                ).data();
+                let block_len = reader
+                    .read_bits(16)
+                    .map_err(|_| CompressionError::UnexpectedEof)?
+                    .data();
+                let block_len_checksum = reader
+                    .read_bits::<u32>(16)
+                    .map_err(|_| CompressionError::UnexpectedEof)?
+                    .data();
                 if (block_len ^ block_len_checksum) != 0xFFFF {
                     return Err(CompressionError::DataError);
                 }
@@ -208,56 +196,43 @@ impl DeflaterInner {
             1 => {
                 self.symbol_decoder =
                     Some(DeflateHuffmanDecoder::HuffmanDecoder(
-                        try!(
-                            HuffmanDecoder::new(
-                                &fix_symbol_table(),
-                                Self::SEARCH_TAB_LEN,
-                            ).map_err(|_| CompressionError::DataError)
-                        ),
+                        HuffmanDecoder::new(
+                            &fix_symbol_table(),
+                            Self::SEARCH_TAB_LEN,
+                        ).map_err(|_| CompressionError::DataError)?,
                         false,
                     ));
                 self.offset_decoder =
                     Some(DeflateHuffmanDecoder::HuffmanDecoder(
-                        try!(
-                            HuffmanDecoder::new(
-                                fix_offset_table(),
-                                Self::SEARCH_TAB_LEN,
-                            ).map_err(|_| CompressionError::DataError)
-                        ),
+                        HuffmanDecoder::new(
+                            fix_offset_table(),
+                            Self::SEARCH_TAB_LEN,
+                        ).map_err(|_| CompressionError::DataError)?,
                         false,
                     ));
             }
             // カスタムハフマン
             2 => {
                 // リテラル/長さ符号の個数
-                let hlit = try!(
-                    reader
-                        .read_bits::<u16>(5)
-                        .map_err(|_| CompressionError::UnexpectedEof)
-                ).data() + 257;
+                let hlit = reader
+                    .read_bits::<u16>(5)
+                    .map_err(|_| CompressionError::UnexpectedEof)?
+                    .data() + 257;
                 // 距離符号の個数
-                let hdist = try!(
-                    reader
-                        .read_bits::<u16>(5)
-                        .map_err(|_| CompressionError::UnexpectedEof)
-                ).data() + 1;
+                let hdist = reader
+                    .read_bits::<u16>(5)
+                    .map_err(|_| CompressionError::UnexpectedEof)?
+                    .data() + 1;
                 // 長さ符号の個数
-                let hclen = try!(
-                    reader
-                        .read_bits::<u32>(4)
-                        .map_err(|_| CompressionError::UnexpectedEof)
-                ).data() + 4;
-                let mut lt = try!(self.dec_len_tree(hclen, reader));
-                self.symbol_decoder = Some(try!(self.dec_huff_tree(
-                    &mut lt,
-                    hlit as usize,
-                    reader
-                )));
-                self.offset_decoder = Some(try!(self.dec_huff_tree(
-                    &mut lt,
-                    hdist as usize,
-                    reader
-                )));
+                let hclen = reader
+                    .read_bits::<u32>(4)
+                    .map_err(|_| CompressionError::UnexpectedEof)?
+                    .data() + 4;
+                let mut lt = self.dec_len_tree(hclen, reader)?;
+                self.symbol_decoder =
+                    Some(self.dec_huff_tree(&mut lt, hlit as usize, reader)?);
+                self.offset_decoder =
+                    Some(self.dec_huff_tree(&mut lt, hdist as usize, reader)?);
             }
             // ありえない
             _ => unreachable!(),
@@ -286,49 +261,46 @@ where
                 if self.is_final {
                     return Ok(None);
                 }
-                try!(self.init_block(reader));
-            } else if let Some(sym) = try!(
-                self.symbol_decoder
-                    .as_mut()
-                    .unwrap()
-                    .dec(reader)
-            ) {
+                self.init_block(reader)?;
+            } else if let Some(sym) = self.symbol_decoder
+                .as_mut()
+                .unwrap()
+                .dec(reader)?
+            {
                 if sym <= 255 {
                     return Ok(Some(LzssCode::Symbol(sym as u8)));
                 } else {
                     let len_index = (sym - 257) as usize;
                     let extbits = (&self.len_tab).ext_bits(len_index);
-                    let len =
-                        (self.len_tab.convert_back(
-                            len_index,
-                            if extbits != 0 {
-                                try!(reader.read_bits(extbits).map_err(|_| {
-                                    CompressionError::UnexpectedEof
-                                })).data()
-                            } else {
-                                0
-                            },
-                        ) + 3) as usize;
-                    let off_index = try!(
-                        try!(
-                            self.offset_decoder
-                                .as_mut()
-                                .unwrap()
-                                .dec(reader)
-                        ).ok_or_else(|| CompressionError::UnexpectedEof)
-                    ) as usize;
+                    let len = (self.len_tab.convert_back(
+                        len_index,
+                        if extbits != 0 {
+                            reader
+                                .read_bits(extbits)
+                                .map_err(|_| CompressionError::UnexpectedEof)?
+                                .data()
+                        } else {
+                            0
+                        },
+                    ) + 3) as usize;
+                    let off_index = self.offset_decoder
+                        .as_mut()
+                        .unwrap()
+                        .dec(reader)?
+                        .ok_or_else(|| CompressionError::UnexpectedEof)?
+                        as usize;
                     let off_extbits = (&self.offset_tab).ext_bits(off_index);
-                    let pos =
-                        self.offset_tab.convert_back(
-                            off_index,
-                            if off_extbits != 0 {
-                                try!(reader.read_bits(off_extbits).map_err(
-                                    |_| CompressionError::UnexpectedEof
-                                )).data()
-                            } else {
-                                0
-                            },
-                        ) as usize;
+                    let pos = self.offset_tab.convert_back(
+                        off_index,
+                        if off_extbits != 0 {
+                            reader
+                                .read_bits(off_extbits)
+                                .map_err(|_| CompressionError::UnexpectedEof)?
+                                .data()
+                        } else {
+                            0
+                        },
+                    ) as usize;
                     return Ok(Some(LzssCode::Reference { len, pos }));
                 }
             }

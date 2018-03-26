@@ -106,7 +106,11 @@ impl<D: Direction, R: Iterator<Item = u8>> BitRead<D> for BitReader<D, R> {
             })
         } else {
             Ok(SmallBitVec::new(
-                D::convert(T::from(self.buf), size_of::<u8>() << 3, firstlen),
+                D::convert(
+                    T::from(self.buf),
+                    size_of::<u8>() << 3,
+                    firstlen,
+                ),
                 firstlen,
             ))
         }
@@ -162,7 +166,7 @@ impl<D: Direction, R: Iterator<Item = u8>> BitRead<D> for BitReader<D, R> {
     {
         let r = self.peek_bits::<T>(len);
         if let Ok(ref l) = r {
-            try!(self.skip_bits(l.len()));
+            self.skip_bits(l.len())?;
         }
         r
     }
@@ -211,7 +215,11 @@ impl<D: Direction, R: Iterator<Item = u8>> BitReader<D, R> {
     where
         T: Shl<usize, Output = T> + Shr<usize, Output = T> + From<u8>,
     {
-        D::convert(T::from(value), size_of::<u8>() << 3, size_of::<T>() << 3)
+        D::convert(
+            T::from(value),
+            size_of::<u8>() << 3,
+            size_of::<T>() << 3,
+        )
     }
 }
 

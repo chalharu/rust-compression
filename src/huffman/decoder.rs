@@ -69,13 +69,12 @@ impl HuffmanLeaf {
                     code.data_ref().clone() >> 1,
                     code.len() - 1,
                 );
-                try!(
-                    if (code.data_ref().clone() & T::from(1)) == T::from(0) {
-                        lft
-                    } else {
-                        rgt
-                    }.add(&next, value)
-                );
+
+                if (code.data_ref().clone() & T::from(1)) == T::from(0) {
+                    lft
+                } else {
+                    rgt
+                }.add(&next, value)?;
             } else {
                 unreachable!();
             }
@@ -93,8 +92,11 @@ enum SymbolTableItem {
 
 impl<D: Direction> HuffmanDecoder<D> {
     pub fn new(symb_len: &[u8], mut stab_bits: usize) -> Result<Self, String> {
-        let max_len =
-            symb_len.into_iter().cloned().max().unwrap_or_else(|| 0) as usize;
+        let max_len = symb_len
+            .into_iter()
+            .cloned()
+            .max()
+            .unwrap_or_else(|| 0) as usize;
         stab_bits = cmp::min(max_len, stab_bits);
 
         if max_len < 16 {
@@ -161,11 +163,11 @@ impl<D: Direction> HuffmanDecoder<D> {
                     match &mut stab[cast_to_usize(head)] {
                         &mut SymbolTableItem::Short(_, _) => unreachable!(),
                         &mut SymbolTableItem::Long(ref mut store) => {
-                            try!(store.add(&body, i as u16));
+                            store.add(&body, i as u16)?;
                         }
                         d => {
                             let mut l = HuffmanLeaf::new();
-                            try!(l.add(&body, i as u16));
+                            l.add(&body, i as u16)?;
                             *d = SymbolTableItem::Long(l);
                         }
                     }
@@ -183,7 +185,7 @@ impl<D: Direction> HuffmanDecoder<D> {
         &mut self,
         reader: &mut R,
     ) -> Result<Option<u16>, String> {
-        let c = try!(reader.peek_bits::<usize>(self.stab_bits));
+        let c = reader.peek_bits::<usize>(self.stab_bits)?;
         if c.is_empty() {
             return Ok(None);
         }
@@ -193,10 +195,10 @@ impl<D: Direction> HuffmanDecoder<D> {
             *c.data_ref()
         };
         if let SymbolTableItem::Short(ref v, ref l) = self.stab[c] {
-            try!(reader.skip_bits(*l as usize));
+            reader.skip_bits(*l as usize)?;
             Ok(Some(*v))
         } else if let SymbolTableItem::Long(ref leaf) = self.stab[c] {
-            try!(reader.skip_bits(self.stab_bits));
+            reader.skip_bits(self.stab_bits)?;
             let mut lleaf = leaf;
 
             // 32ビット以上はエラーとするコードもあるが、

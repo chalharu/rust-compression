@@ -265,7 +265,7 @@ impl EncoderInner {
             --*/
             self.write(queue, SmallBitVec::new(0, 1));
 
-            try!(self.write_blockdata(queue));
+            self.write_blockdata(queue)?;
             self.prepare_new_block();
         }
         /*-- If this is the last block, add the stream trailer. --*/
@@ -278,7 +278,10 @@ impl EncoderInner {
             self.write_u8(queue, 0x90);
             let comcrc = self.combined_crc;
             self.write_u32(queue, comcrc);
-            debug!("    final combined CRC = 0x{:08X}   ", self.combined_crc);
+            debug!(
+                "    final combined CRC = 0x{:08X}   ",
+                self.combined_crc
+            );
         }
         Ok(())
     }
@@ -515,8 +518,10 @@ impl EncoderInner {
         let mut debug_str = String::new();
         /*--- Transmit the mapping table. ---*/
         {
-            let in_use16 =
-                self.in_use.u16_iter().map(|x| x != 0).collect::<BitArray>();
+            let in_use16 = self.in_use
+                .u16_iter()
+                .map(|x| x != 0)
+                .collect::<BitArray>();
 
             let n_bits = self.num_z;
             self.write_u16(
@@ -526,13 +531,11 @@ impl EncoderInner {
                     .fold(0, |x, y| (x << 1) + if y { 1 } else { 0 }),
             );
 
-            for i in in_use16.iter().enumerate().filter_map(|(i, x)| {
-                if x {
-                    Some(i << 4)
-                } else {
-                    None
-                }
-            }) {
+            for i in in_use16
+                .iter()
+                .enumerate()
+                .filter_map(|(i, x)| if x { Some(i << 4) } else { None })
+            {
                 for j in (0..16).map(|x| x + i) {
                     let bv = SmallBitVec::new(
                         if self.in_use.get(j) { 1 } else { 0 },
@@ -559,7 +562,10 @@ impl EncoderInner {
         self.write(queue, SmallBitVec::new(n_selectors as u32, 15));
 
         for s in selector_mtf {
-            self.write(queue, SmallBitVec::new((1 << (s + 1)) - 2, s + 1));
+            self.write(
+                queue,
+                SmallBitVec::new((1 << (s + 1)) - 2, s + 1),
+            );
         }
 
         if log_enabled!(Level::Debug) {
@@ -607,11 +613,9 @@ impl EncoderInner {
                     let b = self.mtf_buffer[i];
                     self.write(
                         queue,
-                        try!(
-                            encoder
-                                .enc(&b)
-                                .map_err(|_| CompressionError::Unexpected)
-                        ),
+                        encoder
+                            .enc(&b)
+                            .map_err(|_| CompressionError::Unexpected)?,
                     );
                 }
                 gs = ge;

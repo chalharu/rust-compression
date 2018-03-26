@@ -65,10 +65,9 @@ where
     ) -> Result<Option<u8>, Self::Error> {
         loop {
             if !self.header_checked {
-                let s = try!(
-                    iter.read_bits::<u8>(8)
-                        .map_err(|_| CompressionError::UnexpectedEof)
-                ).data();
+                let s = iter.read_bits::<u8>(8)
+                    .map_err(|_| CompressionError::UnexpectedEof)?
+                    .data();
                 if self.header.len() < 2 {
                     self.header.push(s);
                     if self.header.len() == 2 {
@@ -118,20 +117,19 @@ where
                     }
                     Ok(None) => {
                         iter.skip_to_next_byte();
-                        let c = try!(
-                            (0..4).map(|_| iter.read_bits::<u32>(8)).fold(
-                                Ok(0_u32),
-                                |s: Result<_, CompressionError>, x| Ok(
-                                    try!(x.map_err(|_| {
+                        let c = (0..4).map(|_| iter.read_bits::<u32>(8)).fold(
+                            Ok(0_u32),
+                            |s: Result<_, CompressionError>, x| {
+                                Ok(x.map_err(|_| {
+                                    CompressionError::UnexpectedEof
+                                })?
+                                    .data()
+                                    | (s.map_err(|_| {
                                         CompressionError::UnexpectedEof
-                                    })).data()
-                                        | (try!(s.map_err(|_| {
-                                            CompressionError::UnexpectedEof
-                                        }))
-                                            << 8)
-                                )
-                            )
-                        );
+                                    })?
+                                        << 8))
+                            },
+                        )?;
                         if u64::from(c) != self.adler32.finish() {
                             return Err(CompressionError::DataError);
                         } else {
