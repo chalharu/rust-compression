@@ -179,6 +179,17 @@ mod tests {
     }
 
     #[test]
+    fn test_long2() {
+        check(
+            &((144..256)
+                .cycle()
+                .take(224)
+                .map(|x| x as u8)
+                .collect::<Vec<u8>>()),
+        );
+    }
+
+    #[test]
     fn test_multiblocks() {
         let mut rng = XorShiftRng::from_seed([
             189_522_394,
