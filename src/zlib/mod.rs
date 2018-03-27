@@ -126,4 +126,39 @@ mod tests {
     fn test_multiblocks5() {
         test_rand_with_len(0x10_0001);
     }
+
+    fn check_with_dict(testarray: &[u8]) {
+        let mut rng = XorShiftRng::from_seed([
+            189_522_394,
+            694_417_663,
+            363_148_323,
+            087_496_301,
+        ]);
+        let dictarray = rng.gen_iter().take(1024).collect::<Vec<_>>();
+
+        let encoded = testarray
+            .to_vec()
+            .encode(&mut ZlibEncoder::with_dict(&dictarray), Action::Finish)
+            .collect::<Result<Vec<_>, _>>();
+        let decoded = encoded
+            .unwrap()
+            .decode(&mut ZlibDecoder::with_dict(&dictarray))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(testarray.to_vec(), decoded);
+    }
+
+    #[test]
+    fn test_with_dict() {
+        let mut rng = XorShiftRng::from_seed([
+            2_189_522_394,
+            1_694_417_663,
+            1_363_148_323,
+            4_087_496_301,
+        ]);
+
+        check_with_dict(&(rng.gen_iter().take(0xF_FFFF).collect::<Vec<_>>()));
+    }
+
 }
