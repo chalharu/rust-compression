@@ -76,6 +76,7 @@ mod bucket_sort;
 mod bitset;
 mod crc32;
 mod adler32;
+mod xxhash;
 
 mod traits;
 mod suffix_array;
