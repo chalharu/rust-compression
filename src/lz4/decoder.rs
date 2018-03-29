@@ -8,9 +8,11 @@
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use core::cmp;
+use core::hash::Hasher;
 use core::ptr;
 use error::CompressionError;
 use traits::decoder::Decoder;
+use xxhash::XXH32;
 
 const MAGIC: u32 = 0x184d2204;
 
@@ -176,10 +178,9 @@ impl Lz4Decoder {
         r |= u32::from(iter.next()
             .ok_or_else(|| CompressionError::UnexpectedEof)?)
             << 16;
-        Ok(r
-            | u32::from(iter.next()
-                .ok_or_else(|| CompressionError::UnexpectedEof)?)
-                << 24)
+        Ok(r | u32::from(iter.next()
+            .ok_or_else(|| CompressionError::UnexpectedEof)?)
+            << 24)
     }
 
     fn read_u64<R: Iterator<Item = u8>>(
@@ -204,10 +205,9 @@ impl Lz4Decoder {
         r |= u64::from(iter.next()
             .ok_or_else(|| CompressionError::UnexpectedEof)?)
             << 48;
-        Ok(r
-            | u64::from(iter.next()
-                .ok_or_else(|| CompressionError::UnexpectedEof)?)
-                << 56)
+        Ok(r | u64::from(iter.next()
+            .ok_or_else(|| CompressionError::UnexpectedEof)?)
+            << 56)
     }
 
     fn read_header<R: Iterator<Item = u8>>(
@@ -219,10 +219,13 @@ impl Lz4Decoder {
             return Err(CompressionError::DataError);
         }
 
+        let mut digest = XXH32::default();
         let flg = iter.next()
             .ok_or_else(|| CompressionError::UnexpectedEof)?;
+        digest.write_u8(flg);
         let bd = iter.next()
             .ok_or_else(|| CompressionError::UnexpectedEof)?;
+        digest.write_u8(bd);
 
         // bits 7/6, the version number. Right now this must be 1
         if (flg >> 6) != 0b01 {
@@ -257,7 +260,9 @@ impl Lz4Decoder {
 
         // read off other portions of the stream
         let size = if stream_size {
-            Some(Self::read_u64(iter)?)
+            let size = Self::read_u64(iter)?;
+            digest.write_u64(size);
+            Some(size)
         } else {
             None
         };
@@ -273,10 +278,14 @@ impl Lz4Decoder {
 
         self.max_block_size = max_block_size;
 
-        // XXX: implement checksums
         let cksum = iter.next()
             .ok_or_else(|| CompressionError::UnexpectedEof)?;
-        debug!("ignoring header checksum: {}", cksum);
+
+        if (digest.finish() >> 8) as u8 != cksum {
+            debug!("invalid header checksum : {}", cksum);
+            return Err(CompressionError::DataError);
+        }
+
         return Ok(());
     }
 
@@ -322,7 +331,12 @@ impl Lz4Decoder {
 
         if self.blk_checksum {
             let cksum = Self::read_u32(iter)?;
-            debug!("ignoring block checksum {}", cksum);
+            let mut digest = XXH32::default();
+            digest.write(&self.output[..self.end]);
+            if digest.finish() != u64::from(cksum) {
+                debug!("invalid block checksum : {}", cksum);
+                return Err(CompressionError::DataError);
+            }
         }
         return Ok(true);
     }
