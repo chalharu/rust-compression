@@ -11,10 +11,9 @@ use core::cmp;
 use core::hash::Hasher;
 use core::ptr;
 use error::CompressionError;
+use lz4::LZ4_MAGIC;
 use traits::decoder::Decoder;
 use xxhash::XXH32;
-
-const MAGIC: u32 = 0x184d2204;
 
 struct BlockDecoder<'a> {
     input: &'a [u8],
@@ -215,7 +214,7 @@ impl Lz4Decoder {
         iter: &mut R,
     ) -> Result<(), CompressionError> {
         // Make sure the magic number is what's expected.
-        if Self::read_u32(iter)? != MAGIC {
+        if Self::read_u32(iter)? != LZ4_MAGIC {
             return Err(CompressionError::DataError);
         }
 
@@ -300,6 +299,7 @@ impl Lz4Decoder {
             // raw block to read
             n if n & 0x80000000 != 0 => {
                 let amt = (n & 0x7fffffff) as usize;
+                debug!("block size: {}", amt);
                 self.output.truncate(0);
                 self.output.reserve(amt);
                 self.output.extend(iter.take(amt));
@@ -310,6 +310,7 @@ impl Lz4Decoder {
             // actual block to decompress
             n => {
                 let n = n as usize;
+                debug!("block size: {}", n);
                 self.temp.truncate(0);
                 self.temp.reserve(n);
                 self.temp.extend(iter.take(n));
