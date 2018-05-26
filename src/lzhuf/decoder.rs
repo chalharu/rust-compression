@@ -100,12 +100,11 @@ impl LzhufDecoderInner {
             let mut ll = Vec::new();
             while ll.len() < len {
                 if ll.len() == 3 {
-                    for _ in 0
-                        ..try!(
-                            reader
-                                .read_bits::<u8>(2)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data()
+                    for _ in 0..try!(
+                        reader
+                            .read_bits::<u8>(2)
+                            .map_err(|_| CompressionError::UnexpectedEof)
+                    ).data()
                     {
                         ll.push(0);
                     }
@@ -149,21 +148,19 @@ impl LzhufDecoderInner {
                 match try!(len_decoder.dec(reader)) {
                     None => return Err(CompressionError::UnexpectedEof),
                     Some(0) => ll.push(0),
-                    Some(1) => for _ in
-                        0
-                            ..(3
-                                + try!(reader.read_bits::<u8>(4).map_err(
-                                    |_| CompressionError::UnexpectedEof
-                                )).data())
+                    Some(1) => for _ in 0..(3 + try!(
+                        reader
+                            .read_bits::<u8>(4)
+                            .map_err(|_| CompressionError::UnexpectedEof)
+                    ).data())
                     {
                         ll.push(0);
                     },
-                    Some(2) => for _ in
-                        0
-                            ..(20
-                                + try!(reader.read_bits::<u16>(9).map_err(
-                                    |_| CompressionError::UnexpectedEof
-                                )).data())
+                    Some(2) => for _ in 0..(20 + try!(
+                        reader
+                            .read_bits::<u16>(9)
+                            .map_err(|_| CompressionError::UnexpectedEof)
+                    ).data())
                     {
                         ll.push(0);
                     },

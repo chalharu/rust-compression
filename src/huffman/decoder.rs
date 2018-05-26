@@ -93,8 +93,11 @@ enum SymbolTableItem {
 
 impl<D: Direction> HuffmanDecoder<D> {
     pub fn new(symb_len: &[u8], mut stab_bits: usize) -> Result<Self, String> {
-        let max_len =
-            symb_len.into_iter().cloned().max().unwrap_or_else(|| 0) as usize;
+        let max_len = symb_len
+            .into_iter()
+            .cloned()
+            .max()
+            .unwrap_or_else(|| 0) as usize;
         stab_bits = cmp::min(max_len, stab_bits);
 
         if max_len < 16 {
@@ -130,13 +133,11 @@ impl<D: Direction> HuffmanDecoder<D> {
             if let Some(b) = h {
                 if stab_bits >= b.len() {
                     let ld = stab_bits - b.len();
-                    let head = cast_to_usize(
-                        if !D::is_reverse() {
-                            b.data_ref().clone() << ld
-                        } else {
-                            b.reverse().data_ref().clone()
-                        },
-                    );
+                    let head = cast_to_usize(if !D::is_reverse() {
+                        b.data_ref().clone() << ld
+                    } else {
+                        b.reverse().data_ref().clone()
+                    });
                     for j in 0..(1 << ld) {
                         if !D::is_reverse() {
                             stab[head | j] =

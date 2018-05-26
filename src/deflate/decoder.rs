@@ -127,33 +127,28 @@ impl DeflaterInner {
                         || Err(CompressionError::UnexpectedEof),
                         |&l| Ok(l),
                     ));
-                    for _ in 0
-                        ..(try!(
-                            reader
-                                .read_bits::<u8>(2)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data() + 3)
+                    for _ in 0..(try!(
+                        reader
+                            .read_bits::<u8>(2)
+                            .map_err(|_| CompressionError::UnexpectedEof)
+                    ).data() + 3)
                     {
                         ll.push(last);
                     }
                 }
-                Some(17) => for _ in 0
-                    ..(3
-                        + try!(
-                            reader
-                                .read_bits::<u8>(3)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data())
+                Some(17) => for _ in 0..(3 + try!(
+                    reader
+                        .read_bits::<u8>(3)
+                        .map_err(|_| CompressionError::UnexpectedEof)
+                ).data())
                 {
                     ll.push(0);
                 },
-                Some(18) => for _ in 0
-                    ..(11
-                        + try!(
-                            reader
-                                .read_bits::<u8>(7)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data())
+                Some(18) => for _ in 0..(11 + try!(
+                    reader
+                        .read_bits::<u8>(7)
+                        .map_err(|_| CompressionError::UnexpectedEof)
+                ).data())
                 {
                     ll.push(0);
                 },
@@ -286,9 +281,12 @@ where
                     return Ok(None);
                 }
                 try!(self.init_block(reader));
-            } else if let Some(sym) =
-                try!(self.symbol_decoder.as_mut().unwrap().dec(reader))
-            {
+            } else if let Some(sym) = try!(
+                self.symbol_decoder
+                    .as_mut()
+                    .unwrap()
+                    .dec(reader)
+            ) {
                 if sym <= 255 {
                     return Ok(Some(LzssCode::Symbol(sym as u8)));
                 } else {
@@ -306,8 +304,12 @@ where
                             },
                         ) + 3) as usize;
                     let off_index = try!(
-                        try!(self.offset_decoder.as_mut().unwrap().dec(reader))
-                            .ok_or_else(|| CompressionError::UnexpectedEof)
+                        try!(
+                            self.offset_decoder
+                                .as_mut()
+                                .unwrap()
+                                .dec(reader)
+                        ).ok_or_else(|| CompressionError::UnexpectedEof)
                     ) as usize;
                     let off_extbits = (&self.offset_tab).ext_bits(off_index);
                     let pos =
@@ -365,6 +367,7 @@ where
     type Output = u8;
 
     fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
-        self.lzss_decoder.next(&mut self.inner.iter(iter))
+        self.lzss_decoder
+            .next(&mut self.inner.iter(iter))
     }
 }

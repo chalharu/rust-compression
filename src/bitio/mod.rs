@@ -5,7 +5,7 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-pub mod reader;
-pub mod writer;
-pub mod small_bit_vec;
 pub mod direction;
+pub mod reader;
+pub mod small_bit_vec;
+pub mod writer;

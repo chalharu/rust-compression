@@ -5,8 +5,8 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-pub mod encoder;
 pub mod decoder;
+pub mod encoder;
 
 // pub use decoder::{DecodeExt, DecodeIterator, Decoder};
 // pub use encoder::{EncodeAction, EncodeExt, EncodeIterator, Encoder};
