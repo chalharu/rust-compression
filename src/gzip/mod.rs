@@ -17,6 +17,7 @@ mod tests {
     use gzip::decoder::GZipDecoder;
     use gzip::encoder::GZipEncoder;
     use rand::{Rng, SeedableRng, XorShiftRng};
+    use rand::distributions::Standard;
     use traits::decoder::DecodeExt;
     use traits::encoder::EncodeExt;
 
@@ -72,7 +73,7 @@ mod tests {
             0x51, 0x6D, 0x3E, 0xA2, 0xF3,
         ]);
 
-        check(&(rng.gen_iter().take(323_742).collect::<Vec<_>>()));
+        check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
@@ -82,7 +83,7 @@ mod tests {
             0x51, 0x6D, 0x3E, 0xA2, 0xF3,
         ]);
 
-        check(&(rng.gen_iter().take(323_742).collect::<Vec<_>>()));
+        check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
@@ -93,7 +94,7 @@ mod tests {
         ]);
 
         check(
-            &(rng.gen_iter()
+            &(rng.sample_iter(&Standard)
                 .take(0xF_FFFF)
                 .collect::<Vec<_>>()),
         );
@@ -105,7 +106,7 @@ mod tests {
             0x51, 0x6D, 0x3E, 0xA2, 0xF3,
         ]);
 
-        check(&(rng.gen_iter().take(len).collect::<Vec<_>>()));
+        check(&(rng.sample_iter(&Standard).take(len).collect::<Vec<_>>()));
     }
 
     #[test]
