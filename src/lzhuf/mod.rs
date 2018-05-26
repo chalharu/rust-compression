@@ -6,8 +6,8 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "lzhuf")]
 
-pub mod encoder;
 pub mod decoder;
+pub mod encoder;
 
 const LZSS_MIN_MATCH: usize = 3;
 
@@ -45,6 +45,7 @@ mod tests {
     use lzhuf::decoder::LzhufDecoder;
     use lzhuf::encoder::LzhufEncoder;
     use rand::{Rng, SeedableRng, XorShiftRng};
+    use rand::distributions::Standard;
     use traits::decoder::DecodeExt;
     use traits::encoder::EncodeExt;
 
@@ -97,48 +98,44 @@ mod tests {
     #[test]
     fn test_multiblocks1() {
         let mut rng = XorShiftRng::from_seed([
-            189_522_394,
-            1_694_417_663,
-            1_363_148_323,
-            4_087_496_301,
+            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
+            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
         ]);
 
-        check(&(rng.gen_iter().take(323_742).collect::<Vec<_>>()));
+        check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
     fn test_multiblocks2() {
         let mut rng = XorShiftRng::from_seed([
-            189_522_394,
-            1_694_417_663,
-            1_363_148_323,
-            4_087_496_301,
+            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
+            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
         ]);
 
-        check(&(rng.gen_iter().take(323_742).collect::<Vec<_>>()));
+        check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
     fn test_multiblocks3() {
         let mut rng = XorShiftRng::from_seed([
-            189_522_394,
-            1_694_417_663,
-            1_363_148_323,
-            4_087_496_301,
+            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
+            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
         ]);
 
-        check(&(rng.gen_iter().take(0xF_FFFF).collect::<Vec<_>>()));
+        check(
+            &(rng.sample_iter(&Standard)
+                .take(0xF_FFFF)
+                .collect::<Vec<_>>()),
+        );
     }
 
     fn test_rand_with_len(len: usize) {
         let mut rng = XorShiftRng::from_seed([
-            189_522_394,
-            1_694_417_663,
-            1_363_148_323,
-            4_087_496_301,
+            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
+            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
         ]);
 
-        check(&(rng.gen_iter().take(len).collect::<Vec<_>>()));
+        check(&(rng.sample_iter(&Standard).take(len).collect::<Vec<_>>()));
     }
 
     #[test]
