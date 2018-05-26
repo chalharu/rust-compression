@@ -6,10 +6,10 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "bzip2")]
 
-mod mtf;
-pub mod encoder;
 pub mod decoder;
+pub mod encoder;
 pub mod error;
+mod mtf;
 
 const HEADER_B: u8 = 0x42;
 const HEADER_Z: u8 = 0x5a;

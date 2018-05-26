@@ -127,38 +127,31 @@ impl DeflaterInner {
                         || Err(CompressionError::UnexpectedEof),
                         |&l| Ok(l),
                     ));
-                    for _ in 0
-                        ..(try!(
-                            reader
-                                .read_bits::<u8>(2)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data() + 3)
+                    for _ in 0..(try!(
+                        reader
+                            .read_bits::<u8>(2)
+                            .map_err(|_| CompressionError::UnexpectedEof)
+                    ).data() + 3)
                     {
                         ll.push(last);
                     }
                 }
-                Some(17) => {
-                    for _ in
-                        0
-                            ..(3
-                                + try!(reader.read_bits::<u8>(3).map_err(
-                                    |_| CompressionError::UnexpectedEof
-                                )).data())
-                    {
-                        ll.push(0);
-                    }
-                }
-                Some(18) => {
-                    for _ in
-                        0
-                            ..(11
-                                + try!(reader.read_bits::<u8>(7).map_err(
-                                    |_| CompressionError::UnexpectedEof
-                                )).data())
-                    {
-                        ll.push(0);
-                    }
-                }
+                Some(17) => for _ in 0..(3 + try!(
+                    reader
+                        .read_bits::<u8>(3)
+                        .map_err(|_| CompressionError::UnexpectedEof)
+                ).data())
+                {
+                    ll.push(0);
+                },
+                Some(18) => for _ in 0..(11 + try!(
+                    reader
+                        .read_bits::<u8>(7)
+                        .map_err(|_| CompressionError::UnexpectedEof)
+                ).data())
+                {
+                    ll.push(0);
+                },
                 Some(n) => ll.push(n as u8),
             }
         }
@@ -268,11 +261,14 @@ impl DeflaterInner {
     }
 }
 
-impl Decoder for DeflaterInner {
-    type Item = LzssCode;
+impl<R> Decoder<R> for DeflaterInner
+where
+    R: BitRead<Right>,
+{
     type Error = CompressionError;
-    type Direction = Right;
-    fn next<R: BitRead<Right>>(
+    type Output = LzssCode;
+
+    fn next(
         &mut self,
         reader: &mut R,
     ) -> Result<Option<LzssCode>, CompressionError> {
@@ -285,9 +281,12 @@ impl Decoder for DeflaterInner {
                     return Ok(None);
                 }
                 try!(self.init_block(reader));
-            } else if let Some(sym) =
-                try!(self.symbol_decoder.as_mut().unwrap().dec(reader))
-            {
+            } else if let Some(sym) = try!(
+                self.symbol_decoder
+                    .as_mut()
+                    .unwrap()
+                    .dec(reader)
+            ) {
                 if sym <= 255 {
                     return Ok(Some(LzssCode::Symbol(sym as u8)));
                 } else {
@@ -305,8 +304,12 @@ impl Decoder for DeflaterInner {
                             },
                         ) + 3) as usize;
                     let off_index = try!(
-                        try!(self.offset_decoder.as_mut().unwrap().dec(reader))
-                            .ok_or_else(|| CompressionError::UnexpectedEof)
+                        try!(
+                            self.offset_decoder
+                                .as_mut()
+                                .unwrap()
+                                .dec(reader)
+                        ).ok_or_else(|| CompressionError::UnexpectedEof)
                     ) as usize;
                     let off_extbits = (&self.offset_tab).ext_bits(off_index);
                     let pos =
@@ -356,15 +359,15 @@ impl Deflater {
     }
 }
 
-impl Decoder for Deflater {
+impl<R> Decoder<R> for Deflater
+where
+    R: BitRead<Right>,
+{
     type Error = CompressionError;
-    type Direction = Right;
-    type Item = u8;
+    type Output = u8;
 
-    fn next<R: BitRead<Self::Direction>>(
-        &mut self,
-        iter: &mut R,
-    ) -> Result<Option<u8>, Self::Error> {
-        self.lzss_decoder.next(&mut self.inner.iter(iter))
+    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+        self.lzss_decoder
+            .next(&mut self.inner.iter(iter))
     }
 }

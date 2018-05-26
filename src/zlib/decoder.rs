@@ -51,15 +51,14 @@ impl ZlibDecoder {
     }
 }
 
-impl Decoder for ZlibDecoder {
+impl<R> Decoder<R> for ZlibDecoder
+where
+    R: BitRead<Right>,
+{
     type Error = CompressionError;
-    type Direction = Right;
-    type Item = u8;
+    type Output = u8;
 
-    fn next<R: BitRead<Self::Direction>>(
-        &mut self,
-        iter: &mut R,
-    ) -> Result<Option<u8>, Self::Error> {
+    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
         loop {
             if !self.header_checked {
                 let s = try!(
@@ -118,15 +117,15 @@ impl Decoder for ZlibDecoder {
                         let c = try!(
                             (0..4).map(|_| iter.read_bits::<u32>(8)).fold(
                                 Ok(0_u32),
-                                |s: Result<_, CompressionError>, x| Ok(
-                                    try!(x.map_err(|_| {
+                                |s: Result<_, CompressionError>, x| {
+                                    Ok(try!(x.map_err(|_| {
                                         CompressionError::UnexpectedEof
                                     })).data()
                                         | (try!(s.map_err(|_| {
                                             CompressionError::UnexpectedEof
                                         }))
-                                            << 8)
-                                )
+                                            << 8))
+                                },
                             )
                         );
                         if u64::from(c) != self.adler32.finish() {

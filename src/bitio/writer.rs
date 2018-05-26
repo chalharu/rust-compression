@@ -12,8 +12,8 @@ use core::borrow::BorrowMut;
 use core::marker::PhantomData;
 use core::mem::size_of;
 use core::ops::{BitOr, Shl, Shr};
-use num_traits::{cast, NumCast};
 use num_traits::sign::Unsigned;
+use num_traits::{cast, NumCast};
 
 pub trait BitWriteExt<T, I>
 where

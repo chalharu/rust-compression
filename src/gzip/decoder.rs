@@ -60,15 +60,14 @@ impl GZipDecoder {
     }
 }
 
-impl Decoder for GZipDecoder {
+impl<R> Decoder<R> for GZipDecoder
+where
+    R: BitRead<Right>,
+{
     type Error = CompressionError;
-    type Direction = Right;
-    type Item = u8;
+    type Output = u8;
 
-    fn next<R: BitRead<Self::Direction>>(
-        &mut self,
-        iter: &mut R,
-    ) -> Result<Option<u8>, Self::Error> {
+    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
         loop {
             if !self.header_checked {
                 if self.header.len() < self.header_needlen {

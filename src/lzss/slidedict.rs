@@ -156,8 +156,16 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
         let icap = rawbuf.len();
         let cap = icap - 1;
         let p = self.buf.get_raw_pos();
-        pos1 = if p < pos1 { icap + p - pos1 } else { p - pos1 };
-        pos2 = if p < pos2 { icap + p - pos2 } else { p - pos2 };
+        pos1 = if p < pos1 {
+            icap + p - pos1
+        } else {
+            p - pos1
+        };
+        pos2 = if p < pos2 {
+            icap + p - pos2
+        } else {
+            p - pos2
+        };
 
         if pos1 > pos2 {
             mem::swap(&mut pos1, &mut pos2);

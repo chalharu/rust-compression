@@ -17,8 +17,8 @@ use bitio::direction::left::Left;
 use bitio::small_bit_vec::SmallBitVec;
 use bitio::writer::BitWriter;
 use bitset::BitArray;
-use bzip2::{HEADER_0, HEADER_h, BZ_G_SIZE, HEADER_B, HEADER_Z};
 use bzip2::mtf::MtfPosition;
+use bzip2::{HEADER_0, HEADER_h, BZ_G_SIZE, HEADER_B, HEADER_Z};
 use core::cmp;
 use core::fmt;
 use core::hash::{BuildHasher, Hasher};
@@ -278,7 +278,10 @@ impl EncoderInner {
             self.write_u8(queue, 0x90);
             let comcrc = self.combined_crc;
             self.write_u32(queue, comcrc);
-            debug!("    final combined CRC = 0x{:08X}   ", self.combined_crc);
+            debug!(
+                "    final combined CRC = 0x{:08X}   ",
+                self.combined_crc
+            );
         }
         Ok(())
     }
@@ -515,8 +518,10 @@ impl EncoderInner {
         let mut debug_str = String::new();
         /*--- Transmit the mapping table. ---*/
         {
-            let in_use16 =
-                self.in_use.u16_iter().map(|x| x != 0).collect::<BitArray>();
+            let in_use16 = self.in_use
+                .u16_iter()
+                .map(|x| x != 0)
+                .collect::<BitArray>();
 
             let n_bits = self.num_z;
             self.write_u16(
@@ -526,13 +531,11 @@ impl EncoderInner {
                     .fold(0, |x, y| (x << 1) + if y { 1 } else { 0 }),
             );
 
-            for i in in_use16.iter().enumerate().filter_map(|(i, x)| {
-                if x {
-                    Some(i << 4)
-                } else {
-                    None
-                }
-            }) {
+            for i in in_use16
+                .iter()
+                .enumerate()
+                .filter_map(|(i, x)| if x { Some(i << 4) } else { None })
+            {
                 for j in (0..16).map(|x| x + i) {
                     let bv = SmallBitVec::new(
                         if self.in_use.get(j) { 1 } else { 0 },
@@ -559,7 +562,10 @@ impl EncoderInner {
         self.write(queue, SmallBitVec::new(n_selectors as u32, 15));
 
         for s in selector_mtf {
-            self.write(queue, SmallBitVec::new((1 << (s + 1)) - 2, s + 1));
+            self.write(
+                queue,
+                SmallBitVec::new((1 << (s + 1)) - 2, s + 1),
+            );
         }
 
         if log_enabled!(Level::Debug) {

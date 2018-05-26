@@ -38,7 +38,9 @@ fn lzss_comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
                 len: rlen,
                 pos: rpos,
             },
-        ) => ((llen << 3) + lpos).cmp(&((rlen << 3) + rpos)).reverse(),
+        ) => ((llen << 3) + lpos)
+            .cmp(&((rlen << 3) + rpos))
+            .reverse(),
         (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
         (_, LzssCode::Symbol(_)) => Ordering::Greater,
         (LzssCode::Symbol(_), _) => Ordering::Less,
@@ -205,9 +207,9 @@ impl Encoder for Inflater {
                     self.writer.write_bits(s)
                 }
                 Some(Ok(InflateBitVec::Byte(s))) => return Some(Ok(s)),
-                Some(Ok(InflateBitVec::Flush)) => {
-                    self.writer.flush::<u16>().unwrap_or_else(|| (0, 0))
-                }
+                Some(Ok(InflateBitVec::Flush)) => self.writer
+                    .flush::<u16>()
+                    .unwrap_or_else(|| (0, 0)),
                 None => {
                     if self.bit_finished {
                         self.bit_finished = false;
@@ -528,7 +530,9 @@ impl InflaterInner {
                 }
             }
             queue.push_back(InflateBitVec::BitVec(try!(
-                sym_enc.enc(&256).map_err(|_| CompressionError::Unexpected)
+                sym_enc
+                    .enc(&256)
+                    .map_err(|_| CompressionError::Unexpected)
             )));
         }
         self.init_block();
@@ -588,10 +592,12 @@ impl InflaterInner {
             LzssCode::Symbol(s) => {
                 self.nocomp_buf.push(s);
             }
-            LzssCode::Reference { len, pos } => for _ in 0..len {
-                let d = self.nocomp_buf[pos];
-                self.nocomp_buf.push(d);
-            },
+            LzssCode::Reference { len, pos } => {
+                for _ in 0..len {
+                    let d = self.nocomp_buf[pos];
+                    self.nocomp_buf.push(d);
+                }
+            }
         }
 
         let code = DeflateLzssCode::from_with_codetab(
@@ -1099,7 +1105,10 @@ mod tests {
         );
         assert_eq!(
             DeflateLzssCode::from_with_codetab(
-                &LzssCode::Reference { len: 10, pos: 7 },
+                &LzssCode::Reference {
+                    len: 10,
+                    pos: 7
+                },
                 &gen_len_tab(),
                 &gen_off_tab(),
             ),
@@ -1112,7 +1121,10 @@ mod tests {
         );
         assert_eq!(
             DeflateLzssCode::from_with_codetab(
-                &LzssCode::Reference { len: 11, pos: 8 },
+                &LzssCode::Reference {
+                    len: 11,
+                    pos: 8
+                },
                 &gen_len_tab(),
                 &gen_off_tab(),
             ),
@@ -1125,7 +1137,10 @@ mod tests {
         );
         assert_eq!(
             DeflateLzssCode::from_with_codetab(
-                &LzssCode::Reference { len: 12, pos: 9 },
+                &LzssCode::Reference {
+                    len: 12,
+                    pos: 9
+                },
                 &gen_len_tab(),
                 &gen_off_tab(),
             ),
@@ -1138,7 +1153,10 @@ mod tests {
         );
         assert_eq!(
             DeflateLzssCode::from_with_codetab(
-                &LzssCode::Reference { len: 13, pos: 10 },
+                &LzssCode::Reference {
+                    len: 13,
+                    pos: 10
+                },
                 &gen_len_tab(),
                 &gen_off_tab(),
             ),

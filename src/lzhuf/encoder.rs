@@ -36,7 +36,9 @@ fn lzss_comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
                 len: rlen,
                 pos: rpos,
             },
-        ) => ((llen << 3) + lpos).cmp(&((rlen << 3) + rpos)).reverse(),
+        ) => ((llen << 3) + lpos)
+            .cmp(&((rlen << 3) + rpos))
+            .reverse(),
         (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
         (_, LzssCode::Symbol(_)) => Ordering::Greater,
         (LzssCode::Symbol(_), _) => Ordering::Less,
@@ -315,8 +317,10 @@ impl LzhufEncoderInner {
 
             if !symb_enc_tab.is_empty() {
                 let mut i = 0;
-                for (sym_ind, &sym_len) in
-                    symb_enc_tab.iter().enumerate().filter(|&(_, &t)| t != 0)
+                for (sym_ind, &sym_len) in symb_enc_tab
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &t)| t != 0)
                 {
                     let gap = sym_ind - i;
                     i = sym_ind + 1;
@@ -370,8 +374,11 @@ impl LzhufEncoderInner {
                 for (len_ind, &len_len) in len_enc_tab_map {
                     while len_ind >= i {
                         if i == 3 {
-                            let skip =
-                                if len_ind > 6 { 3 } else { len_ind - 3 };
+                            let skip = if len_ind > 6 {
+                                3
+                            } else {
+                                len_ind - 3
+                            };
                             ret.push(SmallBitVec::new(skip as u16, 2));
                             i += skip;
                         }
@@ -439,7 +446,10 @@ impl LzhufEncoderInner {
             ret.push(SmallBitVec::new(0, pbit_len));
         } else if off_enc_tab_map.len() == 1 {
             ret.push(SmallBitVec::new(0, pbit_len));
-            ret.push(SmallBitVec::new(off_enc_tab_map[0].0 as u16, pbit_len));
+            ret.push(SmallBitVec::new(
+                off_enc_tab_map[0].0 as u16,
+                pbit_len,
+            ));
         } else {
             let mut i = 0;
             ret.push(SmallBitVec::new(
@@ -470,7 +480,10 @@ impl LzhufEncoderInner {
         let mut off_enc = LzhufHuffmanEncoder::new(&off_enc_tab);
 
         // write block length
-        queue.push_back(SmallBitVec::new(self.block_buf.len() as u16, 16));
+        queue.push_back(SmallBitVec::new(
+            self.block_buf.len() as u16,
+            16,
+        ));
 
         queue.extend(try!(self.write_symb_tab(&sym_enc_tab)));
         let l = self.offset_tab_len;
@@ -519,7 +532,9 @@ impl LzhufEncoderInner {
                 self.symbol_freq[s as usize] += 1;
             }
             LzhufLzssCode::Reference {
-                len, pos_offset, ..
+                len,
+                pos_offset,
+                ..
             } => {
                 self.symbol_freq[len as usize] += 1;
                 self.offset_freq[pos_offset as usize] += 1;
@@ -767,7 +782,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 15 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 15
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 4,
@@ -775,7 +793,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 16 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 16
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 5,
@@ -783,7 +804,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 31 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 31
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 5,
@@ -791,7 +815,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 32 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 32
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 6,
@@ -799,7 +826,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 64 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 64
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 7,
@@ -807,7 +837,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 128 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 128
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 8,
@@ -815,7 +848,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 256 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 256
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 9,
@@ -823,7 +859,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 512 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 512
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 10,
@@ -831,7 +870,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 1023 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 1023
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 10,
@@ -839,7 +881,10 @@ mod tests {
             }
         );
         assert_eq!(
-            LzhufLzssCode::from(&LzssCode::Reference { len: 3, pos: 1024 }),
+            LzhufLzssCode::from(&LzssCode::Reference {
+                len: 3,
+                pos: 1024
+            }),
             LzhufLzssCode::Reference {
                 len: 256,
                 pos_offset: 11,
