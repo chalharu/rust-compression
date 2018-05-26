@@ -8,9 +8,9 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
-use core::{ptr, usize};
 use core::iter;
 use core::ops::{Index, IndexMut};
+use core::{ptr, usize};
 
 #[derive(Clone, Hash, Debug)]
 pub(crate) struct CircularBuffer<T> {

@@ -69,14 +69,14 @@ extern crate rand;
 #[cfg(test)]
 extern crate simple_logger;
 
-mod cbuffer;
 mod action;
-mod error;
-mod bucket_sort;
-mod bitset;
-mod crc32;
 mod adler32;
+mod bitset;
+mod bucket_sort;
+mod cbuffer;
+mod crc32;
 mod xxhash;
+mod error;
 
 mod traits;
 mod suffix_array;
@@ -91,8 +91,8 @@ mod deflate;
 mod lzhuf;
 mod lz4;
 
-mod zlib;
 mod gzip;
+mod zlib;
 
 pub mod prelude {
     pub use action::Action;

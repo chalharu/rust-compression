@@ -6,6 +6,6 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "bzip2")]
 
+mod bucket;
 mod ls_type;
 pub mod sais;
-mod bucket;

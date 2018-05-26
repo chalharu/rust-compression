@@ -6,9 +6,9 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(any(feature = "deflate", feature = "lzhuf"))]
 
-mod slidedict;
-pub mod encoder;
 pub mod decoder;
+pub mod encoder;
+mod slidedict;
 
 use core::cmp::Ordering;
 
@@ -62,7 +62,9 @@ mod tests {
                     len: rlen,
                     pos: rpos,
                 },
-            ) => ((llen << 3) + rpos).cmp(&((rlen << 3) + lpos)).reverse(),
+            ) => ((llen << 3) + rpos)
+                .cmp(&((rlen << 3) + lpos))
+                .reverse(),
             (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
             (_, LzssCode::Symbol(_)) => Ordering::Greater,
             (LzssCode::Symbol(_), _) => Ordering::Less,

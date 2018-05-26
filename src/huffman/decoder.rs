@@ -132,13 +132,11 @@ impl<D: Direction> HuffmanDecoder<D> {
             if let Some(b) = h {
                 if stab_bits >= b.len() {
                     let ld = stab_bits - b.len();
-                    let head = cast_to_usize(
-                        if !D::is_reverse() {
-                            b.data_ref().clone() << ld
-                        } else {
-                            b.reverse().data_ref().clone()
-                        },
-                    );
+                    let head = cast_to_usize(if !D::is_reverse() {
+                        b.data_ref().clone() << ld
+                    } else {
+                        b.reverse().data_ref().clone()
+                    });
                     for j in 0..(1 << ld) {
                         if !D::is_reverse() {
                             stab[head | j] =

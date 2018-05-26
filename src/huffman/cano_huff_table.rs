@@ -90,8 +90,12 @@ fn gen_code_lm<F: Fn(usize, usize) -> usize>(
         }
     }
 
-    let mut val = (0..lim).map(|i| vec![0; max_elem[i]]).collect::<Vec<_>>();
-    let mut ty = (0..lim).map(|i| vec![0; max_elem[i]]).collect::<Vec<_>>();
+    let mut val = (0..lim)
+        .map(|i| vec![0; max_elem[i]])
+        .collect::<Vec<_>>();
+    let mut ty = (0..lim)
+        .map(|i| vec![0; max_elem[i]])
+        .collect::<Vec<_>>();
     let mut c = vec![lim; len];
 
     for (t, &s) in sfreq.iter().enumerate().take(max_elem[lim - 1]) {
@@ -142,7 +146,9 @@ fn gen_code_lm<F: Fn(usize, usize) -> usize>(
         .map(|(&x, i)| (x as u8, i))
         .collect::<Vec<_>>();
     r.sort_unstable_by_key(|v| v.1);
-    r.into_iter().map(move |v| v.0).collect::<Vec<_>>()
+    r.into_iter()
+        .map(move |v| v.0)
+        .collect::<Vec<_>>()
 }
 
 fn gen_code<F: Fn(usize, usize) -> usize>(

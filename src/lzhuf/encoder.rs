@@ -784,7 +784,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 15,
+=======
+                pos: 15
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -795,7 +799,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 16,
+=======
+                pos: 16
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -806,7 +814,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 31,
+=======
+                pos: 31
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -817,7 +829,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 32,
+=======
+                pos: 32
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -828,7 +844,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 64,
+=======
+                pos: 64
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -839,7 +859,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 128,
+=======
+                pos: 128
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -850,7 +874,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 256,
+=======
+                pos: 256
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -861,7 +889,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 512,
+=======
+                pos: 512
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -872,7 +904,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 1023,
+=======
+                pos: 1023
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,
@@ -883,7 +919,11 @@ mod tests {
         assert_eq!(
             LzhufLzssCode::from(&LzssCode::Reference {
                 len: 3,
+<<<<<<< HEAD
                 pos: 1024,
+=======
+                pos: 1024
+>>>>>>> master
             }),
             LzhufLzssCode::Reference {
                 len: 256,

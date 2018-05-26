@@ -7,8 +7,8 @@
 #![cfg(any(feature = "bzip2", feature = "deflate", feature = "lzhuf"))]
 
 pub mod cano_huff_table;
-pub mod encoder;
 pub mod decoder;
+pub mod encoder;
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -56,7 +56,9 @@ where
             .bucket_sort_by_key(|x| x.0, min_symb, max_symb)
             .into_iter()
             .scan(0, move |c, (s, v)| {
-                let r = vec![None; s - *c].into_iter().chain(vec![Some(v)]);
+                let r = vec![None; s - *c]
+                    .into_iter()
+                    .chain(vec![Some(v)]);
                 *c = s + 1;
                 Some(r)
             })

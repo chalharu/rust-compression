@@ -87,7 +87,8 @@ where
     }
 
     fn encode(&mut self) {
-        let info = self.slide.search_dic(self.offset, self.max_match);
+        let info = self.slide
+            .search_dic(self.offset, self.max_match);
 
         if let Some(info) = info.and_then(|x| {
             if x.len >= self.min_match {
@@ -103,8 +104,8 @@ where
                 if out_info.len >= self.max_match {
                     break;
                 }
-                if let Some(item) =
-                    self.slide.search_dic(self.offset - i, self.max_match)
+                if let Some(item) = self.slide
+                    .search_dic(self.offset - i, self.max_match)
                 {
                     if item.len > self.min_match
                         && compare_match_info(&self.comp, &item, &out_info)
@@ -196,7 +197,9 @@ mod tests {
         let mut iter = b"a".into_iter().cloned();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(ret, vec![LzssCode::Symbol(b'a')]);
@@ -213,10 +216,15 @@ mod tests {
         let mut iter = b"a".into_iter().cloned();
         ret.append(&mut (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>());
 
-        assert_eq!(ret, vec![LzssCode::Symbol(b'a'), LzssCode::Symbol(b'a')]);
+        assert_eq!(
+            ret,
+            vec![LzssCode::Symbol(b'a'), LzssCode::Symbol(b'a')]
+        );
     }
 
     #[test]
@@ -225,7 +233,9 @@ mod tests {
         let mut iter = b"aaa".into_iter().cloned();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -245,7 +255,9 @@ mod tests {
         let mut iter = b"aaaa".into_iter().cloned();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -263,14 +275,19 @@ mod tests {
         let mut iter = b"aaaaaaaaaaa".into_iter().cloned();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
             ret,
             vec![
                 LzssCode::Symbol(b'a'),
-                LzssCode::Reference { len: 10, pos: 0 },
+                LzssCode::Reference {
+                    len: 10,
+                    pos: 0,
+                },
             ]
         );
     }
@@ -287,14 +304,19 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
             ret,
             vec![
                 LzssCode::Symbol(b'a'),
-                LzssCode::Reference { len: 255, pos: 0 },
+                LzssCode::Reference {
+                    len: 255,
+                    pos: 0,
+                },
             ]
         );
     }
@@ -310,14 +332,19 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
             ret,
             vec![
                 LzssCode::Symbol(b'a'),
-                LzssCode::Reference { len: 256, pos: 0 },
+                LzssCode::Reference {
+                    len: 256,
+                    pos: 0,
+                },
                 LzssCode::Symbol(b'a'),
                 LzssCode::Symbol(b'a'),
             ]
@@ -335,14 +362,19 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
             ret,
             vec![
                 LzssCode::Symbol(b'a'),
-                LzssCode::Reference { len: 256, pos: 0 },
+                LzssCode::Reference {
+                    len: 256,
+                    pos: 0,
+                },
                 LzssCode::Reference { len: 3, pos: 0 },
             ]
         );
@@ -354,7 +386,9 @@ mod tests {
         let mut iter = b"aaabbbaaabbb".into_iter().cloned();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -374,10 +408,14 @@ mod tests {
     #[test]
     fn test_6() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = b"aabbaabbaaabbbaaabbbaabbaabb".into_iter().cloned();
+        let mut iter = b"aabbaabbaaabbbaaabbbaabbaabb"
+            .into_iter()
+            .cloned();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -390,7 +428,10 @@ mod tests {
                 LzssCode::Reference { len: 6, pos: 3 },
                 LzssCode::Symbol(b'a'),
                 LzssCode::Symbol(b'b'),
-                LzssCode::Reference { len: 10, pos: 5 },
+                LzssCode::Reference {
+                    len: 10,
+                    pos: 5,
+                },
                 LzssCode::Reference { len: 6, pos: 3 },
             ]
         );
@@ -408,14 +449,21 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         let mut result = (0..256)
             .map(|x| LzssCode::Symbol(x as u8))
             .collect::<Vec<_>>();
-        result
-            .append(&mut vec![LzssCode::Reference { len: 256, pos: 255 }; 255]);
+        result.append(&mut vec![
+            LzssCode::Reference {
+                len: 256,
+                pos: 255
+            };
+            255
+        ]);
         assert_eq!(ret, result);
     }
 
@@ -431,13 +479,21 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         let mut result = (0..256)
             .map(|x| LzssCode::Symbol(x as u8))
             .collect::<Vec<_>>();
-        result.append(&mut vec![LzssCode::Reference { len: 256, pos: 255 }; 2]);
+        result.append(&mut vec![
+            LzssCode::Reference {
+                len: 256,
+                pos: 255
+            };
+            2
+        ]);
         assert_eq!(ret, result);
     }
 
@@ -449,7 +505,10 @@ mod tests {
             256,
             3,
             3,
-            &((0..256).into_iter().map(|x| x as u8).collect::<Vec<u8>>()),
+            &((0..256)
+                .into_iter()
+                .map(|x| x as u8)
+                .collect::<Vec<u8>>()),
         );
 
         let mut iter = (0..256)
@@ -461,10 +520,21 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
-        assert_eq!(ret, vec![LzssCode::Reference { len: 256, pos: 255 }; 2]);
+        assert_eq!(
+            ret,
+            vec![
+                LzssCode::Reference {
+                    len: 256,
+                    pos: 255
+                };
+                2
+            ]
+        );
     }
 
     #[test]
@@ -492,14 +562,22 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .into_iter()
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Flush))
+            .scan((), |_, _| {
+                encoder.next(&mut iter, &Action::Flush)
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(
             ret,
             vec![
-                LzssCode::Reference { len: 256, pos: 256 },
-                LzssCode::Reference { len: 256, pos: 255 },
+                LzssCode::Reference {
+                    len: 256,
+                    pos: 256,
+                },
+                LzssCode::Reference {
+                    len: 256,
+                    pos: 255,
+                },
             ]
         );
     }
