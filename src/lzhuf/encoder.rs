@@ -9,7 +9,7 @@ use action::Action;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
-use alloc::vec_deque::VecDeque;
+use alloc::collections::vec_deque::VecDeque;
 use bitio::direction::Direction;
 use bitio::direction::left::Left;
 use bitio::small_bit_vec::SmallBitVec;
