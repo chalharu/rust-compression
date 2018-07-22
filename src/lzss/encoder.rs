@@ -7,7 +7,7 @@
 
 use action::Action;
 #[cfg(not(feature = "std"))]
-use alloc::vec_deque::VecDeque;
+use alloc::collections::vec_deque::VecDeque;
 use core::cmp::{self, Ordering};
 use lzss::LzssCode;
 use lzss::compare_match_info;
