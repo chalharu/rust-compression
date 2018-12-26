@@ -141,4 +141,31 @@ mod tests {
             include_bytes!("../../data/sample4.ref"),
         );
     }
+
+    #[test]
+    fn test_long() {
+        setup();
+        let data = b"a".into_iter()
+                .cycle()
+                .take(1000)
+                .cloned()
+                .collect::<Vec<u8>>();
+
+        let compressed = data
+            .iter()
+            .cloned()
+            .encode(&mut BZip2Encoder::new(9), Action::Finish)
+            .collect::<Result<Vec<_>, _>>();
+
+        let decompressed = compressed.unwrap()
+            .iter()
+            .cloned()
+            .decode(&mut BZip2Decoder::new())
+            .collect::<Result<Vec<_>, _>>();
+
+        if let Err(e) = decompressed {
+            debug!("{}", e);
+        }
+        assert_eq!(decompressed, Ok(data));
+    }
 }
