@@ -575,7 +575,7 @@ where
             }
 
             let buffer = try!(self.get_next_lfm());
-            if buffer == self.result_charactor {
+            if buffer == self.result_charactor && self.result_count < 4 {
                 self.result_count += 1;
                 self.result_wrote_count += 1;
             } else {
