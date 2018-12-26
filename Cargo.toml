@@ -1,6 +1,6 @@
 [package]
 name = "compression"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Mitsuharu Seki <mitsu1986@gmail.com>"]
 repository = "https://github.com/chalharu/rust-compression"
 keywords = ["compress", "gzip", "deflate", "bzip2", "no_std"]
