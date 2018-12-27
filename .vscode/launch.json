@@ -5,29 +5,34 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug Test",
-            "program": "${workspaceRoot}/target/debug/deps/compression-33f748de75300242",
-            "args": [
-                "--nocapture"
-            ],
-            "cwd": "${workspaceRoot}",
+            "cargo": {
+                "args": [
+                    "+nightly",
+                    "test",
+                    "--no-run",
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
             "sourceLanguages": [
                 "rust"
-            ],
-            "preLaunchTask": "cargo build test",
-            "internalConsoleOptions": "openOnSessionStart"
+            ]
         },
         {
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceRoot}/target/debug/chfft",
+            "cargo": {
+                "args": [
+                    "+nightly",
+                    "build"
+                ]
+            },
             "args": [],
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceFolder}",
             "sourceLanguages": [
                 "rust"
-            ],
-            "preLaunchTask": "cargo build",
-            "internalConsoleOptions": "openOnSessionStart"
+            ]
         }
     ]
 }
