@@ -129,7 +129,8 @@ mod tests {
     use alloc::vec::Vec;
     use deflate::decoder::Deflater;
     use deflate::encoder::Inflater;
-    use rand::{Rng, SeedableRng, XorShiftRng};
+    use rand::{Rng, SeedableRng};
+    use rand_xorshift::XorShiftRng;
     use rand::distributions::Standard;
     use traits::decoder::DecodeExt;
     use traits::encoder::EncodeExt;
