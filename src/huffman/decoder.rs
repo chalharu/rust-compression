@@ -94,7 +94,7 @@ enum SymbolTableItem {
 impl<D: Direction> HuffmanDecoder<D> {
     pub fn new(symb_len: &[u8], mut stab_bits: usize) -> Result<Self, String> {
         let max_len = symb_len
-            .into_iter()
+            .iter()
             .cloned()
             .max()
             .unwrap_or_else(|| 0) as usize;

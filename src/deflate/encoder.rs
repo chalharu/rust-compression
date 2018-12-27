@@ -153,10 +153,10 @@ impl Inflater {
     fn next_bits<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<Result<InflateBitVec, CompressionError>> {
         while self.queue.is_empty() {
-            match self.lzss.next(iter, action) {
+            match self.lzss.next(iter, &action) {
                 Some(ref s) => {
                     if let Err(e) = self.inner.next(s, &mut self.queue) {
                         return Some(Err(e));
@@ -167,7 +167,7 @@ impl Inflater {
                         self.finished = false;
                         return None;
                     } else {
-                        match *action {
+                        match action {
                             Action::Flush => {
                                 if let Err(e) =
                                     self.inner.flush(&mut self.queue)
@@ -201,7 +201,7 @@ impl Encoder for Inflater {
         action: &Action,
     ) -> Option<Result<u8, CompressionError>> {
         while self.bitbuflen == 0 {
-            let s = match self.next_bits(iter, action) {
+            let s = match self.next_bits(iter, *action) {
                 Some(Err(e)) => return Some(Err(e)),
                 Some(Ok(InflateBitVec::BitVec(ref s))) => {
                     self.writer.write_bits(s)
@@ -475,7 +475,7 @@ impl InflaterInner {
                 self.decompress_len as u16 ^ 0xFFFF,
                 16,
             )));
-            for i in 1..(self.decompress_len + 1) {
+            for i in 1..=self.decompress_len {
                 let d = self.nocomp_buf[self.decompress_len - i];
                 queue.push_back(InflateBitVec::Byte(d));
             }
@@ -652,7 +652,7 @@ mod tests {
     #[test]
     fn test_empty() {
         let mut encoder = Inflater::new();
-        let ret = [].into_iter()
+        let ret = [].iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -669,7 +669,7 @@ mod tests {
     #[test]
     fn test_unit() {
         let mut encoder = Inflater::new();
-        let ret = b"a".into_iter()
+        let ret = b"a".iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -688,7 +688,7 @@ mod tests {
     fn test_arr() {
         let mut encoder = Inflater::new();
         let ret = b"aaaaaaaaaaa"
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -712,7 +712,7 @@ mod tests {
     fn test_arr2() {
         let mut encoder = Inflater::new();
         let a = b"aabbaabbaaabbbaaabbbaabbaabb"
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();

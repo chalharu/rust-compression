@@ -96,7 +96,7 @@ impl DeflaterInner {
             16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
         ];
         let mut len_list = vec![0; 19];
-        for &i in len_index.into_iter().take(hclen as usize) {
+        for &i in len_index.iter().take(hclen as usize) {
             len_list[i] = *try!(
                 reader
                     .read_bits(3)

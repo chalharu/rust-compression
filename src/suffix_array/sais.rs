@@ -227,7 +227,7 @@ fn sa_is<T: Copy + PartialEq<T> + PartialOrd<T>>(
     }
     {
         let mut j = count - 1;
-        for i in (n1..j + 1).rev() {
+        for i in (n1..=j).rev() {
             if suffix_array[i] < usize::max_value() {
                 suffix_array[j] = suffix_array[i];
                 j -= 1;
@@ -241,7 +241,7 @@ fn sa_is<T: Copy + PartialEq<T> + PartialOrd<T>>(
         slice::from_raw_parts_mut(
             suffix_array
                 .as_mut_ptr()
-                .offset((count - n1) as isize),
+                .add(count - n1),
             n1,
         )
     };

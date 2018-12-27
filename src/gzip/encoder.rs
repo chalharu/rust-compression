@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn test_unit() {
         let mut encoder = GZipEncoder::new();
-        let ret = b"a".into_iter()
+        let ret = b"a".iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();

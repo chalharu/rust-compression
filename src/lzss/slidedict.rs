@@ -193,10 +193,10 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
         let mm = self.min_match;
         self.append_buf.append(&mut data.to_vec());
         if self.buf.len() >= self.min_match {
-            for i in 0..(self.append_buf.len() - mm + 1) {
+            for i in 0..=(self.append_buf.len() - mm) {
                 let v = unsafe {
                     slice::from_raw_parts(
-                        self.append_buf.as_ptr().offset(i as isize),
+                        self.append_buf.as_ptr().add(i),
                         mm,
                     )
                 };

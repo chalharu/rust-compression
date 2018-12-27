@@ -96,7 +96,7 @@ where
                     if let Some(dict_hash) = self.dict_hash {
                         let dictid = self.header
                             .as_slice()
-                            .into_iter()
+                            .iter()
                             .skip(2)
                             .fold(0_u32, |s, &x| u32::from(x) | (s << 8));
                         if dict_hash != dictid {

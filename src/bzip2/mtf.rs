@@ -16,7 +16,7 @@ pub(crate) struct MtfPosition {
 impl MtfPosition {
     pub fn new(count: usize) -> Self {
         Self {
-            data: (0..count).into_iter().collect::<Vec<_>>(),
+            data: (0..count).collect::<Vec<_>>(),
         }
     }
     pub fn pop(&mut self, value: usize) -> usize {
@@ -45,7 +45,7 @@ pub(crate) struct MtfPositionDecoder {
 impl MtfPositionDecoder {
     pub fn new(count: usize) -> Self {
         Self {
-            data: (0..count).into_iter().collect::<Vec<_>>(),
+            data: (0..count).collect::<Vec<_>>(),
         }
     }
     pub fn pop(&mut self, value: usize) -> usize {

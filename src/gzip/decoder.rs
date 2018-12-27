@@ -127,7 +127,7 @@ where
                     let fname_len = if (flg & 0b1000) != 0 {
                         // NAME
                         if let Some(l) = (&self.header)
-                            .into_iter()
+                            .iter()
                             .enumerate()
                             .skip(10 + xlen)
                             .skip_while(|x| *x.1 != 0)
@@ -146,7 +146,7 @@ where
                     let fcomment_len = if (flg & 0b1_0000) != 0 {
                         // COMMENT
                         if let Some(l) = (&self.header)
-                            .into_iter()
+                            .iter()
                             .enumerate()
                             .skip(10 + xlen + fname_len)
                             .skip_while(|x| *x.1 != 0)

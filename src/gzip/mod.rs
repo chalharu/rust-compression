@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn test_long() {
         check(
-            &(b"a".into_iter()
+            &(b"a".iter()
                 .cycle()
                 .take(260)
                 .cloned()

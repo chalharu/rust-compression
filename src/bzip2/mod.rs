@@ -38,7 +38,7 @@ mod tests {
     fn test_unit() {
         setup();
         let ret = b"a\n"
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut BZip2Encoder::new(9), Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -82,7 +82,7 @@ mod tests {
 
         let mut encoder = BZip2Encoder::new(1);
         let ret = include_bytes!("../../data/sample1.ref")
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>()
@@ -101,7 +101,7 @@ mod tests {
 
         let mut encoder = BZip2Encoder::new(2);
         let ret = include_bytes!("../../data/sample2.ref")
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>()
@@ -120,7 +120,7 @@ mod tests {
 
         let mut encoder = BZip2Encoder::new(3);
         let ret = include_bytes!("../../data/sample3.ref")
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>()
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn test_long() {
         setup();
-        let data = b"a".into_iter()
+        let data = b"a".iter()
                 .cycle()
                 .take(1000)
                 .cloned()

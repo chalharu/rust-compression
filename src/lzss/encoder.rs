@@ -194,9 +194,8 @@ mod tests {
     fn test_unit() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
 
-        let mut iter = b"a".into_iter().cloned();
+        let mut iter = b"a".iter().cloned();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -208,14 +207,12 @@ mod tests {
     #[test]
     fn test_2len() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = b"a".into_iter().cloned();
+        let mut iter = b"a".iter().cloned();
         let mut ret = (0..)
-            .into_iter()
             .scan((), |_, _| encoder.next(&mut iter, &Action::Run))
             .collect::<Vec<_>>();
-        let mut iter = b"a".into_iter().cloned();
+        let mut iter = b"a".iter().cloned();
         ret.append(&mut (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -230,9 +227,8 @@ mod tests {
     #[test]
     fn test_3len() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = b"aaa".into_iter().cloned();
+        let mut iter = b"aaa".iter().cloned();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -252,9 +248,8 @@ mod tests {
     fn test_4len() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
 
-        let mut iter = b"aaaa".into_iter().cloned();
+        let mut iter = b"aaaa".iter().cloned();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -272,9 +267,8 @@ mod tests {
     #[test]
     fn test_short_len() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = b"aaaaaaaaaaa".into_iter().cloned();
+        let mut iter = b"aaaaaaaaaaa".iter().cloned();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -296,14 +290,13 @@ mod tests {
     fn test_middle_repeat() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
 
-        let mut iter = b"a".into_iter()
+        let mut iter = b"a".iter()
             .cycle()
             .take(256)
             .cloned()
             .collect::<Vec<u8>>()
             .into_iter();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -324,14 +317,13 @@ mod tests {
     #[test]
     fn test_long_repeat() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = b"a".into_iter()
+        let mut iter = b"a".iter()
             .cycle()
             .take(259)
             .cloned()
             .collect::<Vec<u8>>()
             .into_iter();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -354,14 +346,13 @@ mod tests {
     #[test]
     fn test_long_repeat2() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = b"a".into_iter()
+        let mut iter = b"a".iter()
             .cycle()
             .take(260)
             .cloned()
             .collect::<Vec<u8>>()
             .into_iter();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -383,9 +374,8 @@ mod tests {
     #[test]
     fn test_5() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = b"aaabbbaaabbb".into_iter().cloned();
+        let mut iter = b"aaabbbaaabbb".iter().cloned();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -409,10 +399,9 @@ mod tests {
     fn test_6() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
         let mut iter = b"aabbaabbaaabbbaaabbbaabbaabb"
-            .into_iter()
+            .iter()
             .cloned();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -441,14 +430,12 @@ mod tests {
     fn test_7() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
         let mut iter = (0..256)
-            .into_iter()
             .cycle()
             .take(0x1_0000)
             .map(|x| x as u8)
             .collect::<Vec<u8>>()
             .into_iter();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -471,14 +458,12 @@ mod tests {
     fn test_8() {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
         let mut iter = (0..256)
-            .into_iter()
             .cycle()
             .take(768)
             .map(|x| x as u8)
             .collect::<Vec<u8>>()
             .into_iter();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -506,20 +491,17 @@ mod tests {
             3,
             3,
             &((0..256)
-                .into_iter()
                 .map(|x| x as u8)
                 .collect::<Vec<u8>>()),
         );
 
         let mut iter = (0..256)
-            .into_iter()
             .cycle()
             .take(512)
             .map(|x| x as u8)
             .collect::<Vec<u8>>()
             .into_iter();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -546,7 +528,6 @@ mod tests {
             3,
             3,
             &((0..256)
-                .into_iter()
                 .cycle()
                 .take(0x1_0001)
                 .map(|x| x as u8)
@@ -554,14 +535,12 @@ mod tests {
         );
 
         let mut iter = (0..256)
-            .into_iter()
             .cycle()
             .take(512)
             .map(|x| x as u8)
             .collect::<Vec<u8>>()
             .into_iter();
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })

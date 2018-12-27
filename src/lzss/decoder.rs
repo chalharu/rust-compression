@@ -69,9 +69,8 @@ mod tests {
     fn test() {
         let testvec = b"aabbaabbaaabbbaaabbbaabbaabb";
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
-        let mut iter = testvec.into_iter().cloned();
+        let mut iter = testvec.iter().cloned();
         let enc_ret = (0..)
-            .into_iter()
             .scan((), |_, _| {
                 encoder.next(&mut iter, &Action::Flush)
             })
@@ -80,7 +79,6 @@ mod tests {
         let mut decoder = LzssDecoder::new(0x1_0000);
         let mut dec_iter = enc_ret.into_iter().map::<Result<_, ()>, _>(Ok);
         let ret = (0..)
-            .into_iter()
             .scan((), |_, _| decoder.next(&mut dec_iter).unwrap())
             .collect::<Vec<_>>();
 

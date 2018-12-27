@@ -204,7 +204,7 @@ pub fn make_tab_with_fn<F: Fn(usize, usize) -> usize>(
     if freq.is_empty() {
         Vec::new()
     } else {
-        let (s, l): (Vec<_>, Vec<_>) = freq.into_iter()
+        let (s, l): (Vec<_>, Vec<_>) = freq.iter()
             .enumerate()
             .filter_map(|(i, &t)| if t != 0 { Some((i, t)) } else { None })
             .unzip();

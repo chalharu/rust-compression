@@ -85,7 +85,7 @@ impl FromIterator<bool> for BitArray {
         T: IntoIterator<Item = bool>,
     {
         let mut s = 0;
-        let mut l = 0;
+        let mut l: usize = 0;
         let it = iter.into_iter();
         let mut data = if let (_, Some(sh)) = it.size_hint() {
             Vec::with_capacity((sh + 63) >> 6)
@@ -97,12 +97,12 @@ impl FromIterator<bool> for BitArray {
                 s |= 1 << (l & 63);
             }
             l += 1;
-            if l & 63 == 0 {
+            if l.trailing_zeros() >= 6 {
                 data.push(s);
                 s = 0;
             }
         }
-        if l & 63 != 0 {
+        if l.trailing_zeros() < 6 {
             data.push(s);
         }
         BitArray {

@@ -70,7 +70,7 @@ impl BZip2Encoder {
     fn next_bits<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<Result<SmallBitVec<u32>, CompressionError>> {
         while self.queue.is_empty() {
             match iter.next() {
@@ -84,7 +84,7 @@ impl BZip2Encoder {
                         self.finished = false;
                         return None;
                     } else {
-                        match *action {
+                        match action {
                             Action::Flush => {
                                 if let Err(e) =
                                     self.inner.flush(&mut self.queue)
@@ -117,7 +117,7 @@ impl Encoder for BZip2Encoder {
         action: &Action,
     ) -> Option<Result<u8, CompressionError>> {
         while self.bitbuflen == 0 {
-            let s = match self.next_bits(iter, action) {
+            let s = match self.next_bits(iter, *action) {
                 Some(Err(e)) => return Some(Err(e)),
                 Some(Ok(ref s)) => self.writer.write_bits(s),
                 None => {

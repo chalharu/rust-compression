@@ -26,7 +26,7 @@ where
     SmallBitVec<T>: SmallBitVecReverse,
 {
     let symbs = symb_len
-        .into_iter()
+        .iter()
         .enumerate()
         .filter(|&(_, &t)| t != 0)
         .collect::<Vec<_>>();
@@ -93,7 +93,7 @@ mod tests {
 
         let mut writer = BitWriter::<D>::new();
         let vec = testarray
-            .into_iter()
+            .iter()
             .map(|c| hencoder.enc(c).unwrap())
             .to_bytes(&mut writer, Action::Flush)
             .collect::<Vec<_>>();

@@ -159,7 +159,7 @@ mod tests {
 
         assert_eq!(
             b"abcdefgh"
-                .into_iter()
+                .iter()
                 .map(|x| x - 0x60)
                 .map(|x| hencoder.enc(&x).unwrap())
                 .collect::<Vec<_>>(),
