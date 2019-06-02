@@ -144,7 +144,7 @@ where
     pub fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<LzssCode> {
         while self.lzss_queue.is_empty() {
             match iter.next() {
@@ -154,7 +154,7 @@ where
                         self.finished = false;
                         return None;
                     } else {
-                        if Action::Flush == *action || Action::Finish == *action
+                        if Action::Flush == action || Action::Finish == action
                         {
                             self.flush()
                         };
@@ -197,7 +197,7 @@ mod tests {
         let mut iter = b"a".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -209,12 +209,12 @@ mod tests {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
         let mut iter = b"a".iter().cloned();
         let mut ret = (0..)
-            .scan((), |_, _| encoder.next(&mut iter, &Action::Run))
+            .scan((), |_, _| encoder.next(&mut iter, Action::Run))
             .collect::<Vec<_>>();
         let mut iter = b"a".iter().cloned();
         ret.append(&mut (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>());
 
@@ -230,7 +230,7 @@ mod tests {
         let mut iter = b"aaa".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -251,7 +251,7 @@ mod tests {
         let mut iter = b"aaaa".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -270,7 +270,7 @@ mod tests {
         let mut iter = b"aaaaaaaaaaa".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -298,7 +298,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -325,7 +325,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -354,7 +354,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -377,7 +377,7 @@ mod tests {
         let mut iter = b"aaabbbaaabbb".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -403,7 +403,7 @@ mod tests {
             .cloned();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -437,7 +437,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -465,7 +465,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -503,7 +503,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
@@ -542,7 +542,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 

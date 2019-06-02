@@ -275,7 +275,7 @@ where
         loop {
             if self.symbol_decoder
                 .as_ref()
-                .map_or_else(|| true, |x| x.end())
+                .map_or_else(|| true, DeflateHuffmanDecoder::end)
             {
                 if self.is_final {
                     return Ok(None);

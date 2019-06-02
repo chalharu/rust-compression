@@ -85,7 +85,7 @@ impl Encoder for GZipEncoder {
     fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<Result<u8, CompressionError>> {
         let hlen = self.header_len;
         if hlen > 0 {

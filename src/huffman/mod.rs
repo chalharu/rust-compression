@@ -94,7 +94,7 @@ mod tests {
         let mut writer = BitWriter::<D>::new();
         let vec = testarray
             .iter()
-            .map(|c| hencoder.enc(c).unwrap())
+            .map(|c| hencoder.enc(*c).unwrap())
             .to_bytes(&mut writer, Action::Flush)
             .collect::<Vec<_>>();
 

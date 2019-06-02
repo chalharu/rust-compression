@@ -66,7 +66,7 @@ impl LzhufHuffmanEncoder {
 
     pub fn enc(
         &mut self,
-        data: &u16,
+        data: u16,
     ) -> Result<Option<SmallBitVec<u16>>, CompressionError> {
         match *self {
             LzhufHuffmanEncoder::HuffmanEncoder(ref mut lhe) => lhe.enc(data)
@@ -148,7 +148,7 @@ impl LzhufEncoder {
     fn next_bits<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<Result<SmallBitVec<u16>, CompressionError>> {
         while self.queue.is_empty() {
             match self.lzss.next(iter, action) {
@@ -162,7 +162,7 @@ impl LzhufEncoder {
                         self.finished = false;
                         return None;
                     } else {
-                        match *action {
+                        match action {
                             Action::Flush => {
                                 if let Err(e) =
                                     self.inner.flush(&mut self.queue)
@@ -193,7 +193,7 @@ impl Encoder for LzhufEncoder {
     fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<Result<u8, CompressionError>> {
         while self.bitbuflen == 0 {
             let s = match self.next_bits(iter, action) {
@@ -204,7 +204,7 @@ impl Encoder for LzhufEncoder {
                         self.bit_finished = false;
                         return None;
                     } else {
-                        match *action {
+                        match action {
                             Action::Finish | Action::Flush => {
                                 self.bit_finished = true;
                                 match self.writer.flush::<u16>() {
@@ -401,24 +401,24 @@ impl LzhufEncoderInner {
             for (s, l) in sym_list {
                 match s {
                     0 => {
-                        if let Some(e) = try!(len_enc.enc(&0)) {
+                        if let Some(e) = try!(len_enc.enc(0)) {
                             ret.push(e)
                         }
                     }
                     1 => {
-                        if let Some(e) = try!(len_enc.enc(&1)) {
+                        if let Some(e) = try!(len_enc.enc(1)) {
                             ret.push(e)
                         };
                         ret.push(SmallBitVec::new(l as u16, 4));
                     }
                     2 => {
-                        if let Some(e) = try!(len_enc.enc(&2)) {
+                        if let Some(e) = try!(len_enc.enc(2)) {
                             ret.push(e)
                         };
                         ret.push(SmallBitVec::new(l as u16, 9));
                     }
                     _ => {
-                        if let Some(e) = try!(len_enc.enc(&(l as u16))) {
+                        if let Some(e) = try!(len_enc.enc(l as u16)) {
                             ret.push(e)
                         }
                     }
@@ -492,13 +492,13 @@ impl LzhufEncoderInner {
         for d in &self.block_buf {
             match *d {
                 LzhufLzssCode::Symbol(s) => {
-                    if let Some(e) = try!(sym_enc.enc(&u16::from(s))) {
+                    if let Some(e) = try!(sym_enc.enc(u16::from(s))) {
                         queue.push_back(e)
                     }
                 }
                 LzhufLzssCode::Reference {
-                    ref len,
-                    ref pos_offset,
+                    len,
+                    pos_offset,
                     pos_sublen,
                 } => {
                     if let Some(e) = try!(sym_enc.enc(len)) {
@@ -507,10 +507,10 @@ impl LzhufEncoderInner {
                     if let Some(e) = try!(off_enc.enc(pos_offset)) {
                         queue.push_back(e)
                     }
-                    if *pos_offset > 1 {
+                    if pos_offset > 1 {
                         queue.push_back(SmallBitVec::new(
                             pos_sublen,
-                            *pos_offset as usize - 1,
+                            pos_offset as usize - 1,
                         ));
                     }
                 }

@@ -114,10 +114,10 @@ impl Encoder for BZip2Encoder {
     fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<Result<u8, CompressionError>> {
         while self.bitbuflen == 0 {
-            let s = match self.next_bits(iter, *action) {
+            let s = match self.next_bits(iter, action) {
                 Some(Err(e)) => return Some(Err(e)),
                 Some(Ok(ref s)) => self.writer.write_bits(s),
                 None => {
@@ -125,7 +125,7 @@ impl Encoder for BZip2Encoder {
                         self.bit_finished = false;
                         return None;
                     } else {
-                        match *action {
+                        match action {
                             Action::Finish | Action::Flush => {
                                 self.bit_finished = true;
                                 match self.writer.flush::<u32>() {
@@ -615,7 +615,7 @@ impl EncoderInner {
                         queue,
                         try!(
                             encoder
-                                .enc(&b)
+                                .enc(b)
                                 .map_err(|_| CompressionError::Unexpected)
                         ),
                     );

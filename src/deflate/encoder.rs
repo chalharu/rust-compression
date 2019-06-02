@@ -156,7 +156,7 @@ impl Inflater {
         action: Action,
     ) -> Option<Result<InflateBitVec, CompressionError>> {
         while self.queue.is_empty() {
-            match self.lzss.next(iter, &action) {
+            match self.lzss.next(iter, action) {
                 Some(ref s) => {
                     if let Err(e) = self.inner.next(s, &mut self.queue) {
                         return Some(Err(e));
@@ -198,10 +198,10 @@ impl Encoder for Inflater {
     fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<Result<u8, CompressionError>> {
         while self.bitbuflen == 0 {
-            let s = match self.next_bits(iter, *action) {
+            let s = match self.next_bits(iter, action) {
                 Some(Err(e)) => return Some(Err(e)),
                 Some(Ok(InflateBitVec::BitVec(ref s))) => {
                     self.writer.write_bits(s)
@@ -215,7 +215,7 @@ impl Encoder for Inflater {
                         self.bit_finished = false;
                         return None;
                     } else {
-                        match *action {
+                        match action {
                             Action::Finish | Action::Flush => {
                                 self.bit_finished = true;
                                 match self.writer.flush::<u16>() {
@@ -355,9 +355,9 @@ impl InflaterInner {
     fn conv_tab(list: &[(u8, u16)], enc_tab: &[u8]) -> Vec<SmallBitVec<u16>> {
         let mut ret = Vec::new();
         let enc = HuffmanEncoder::<Right, _>::new(enc_tab);
-        for &(ref s, e) in list.iter() {
+        for &(s, e) in list.iter() {
             ret.push(enc.enc(s).unwrap());
-            match *s {
+            match s {
                 16 => ret.push(SmallBitVec::new(e, 2)),
                 17 => ret.push(SmallBitVec::new(e, 3)),
                 18 => ret.push(SmallBitVec::new(e, 7)),
@@ -501,7 +501,7 @@ impl InflaterInner {
             };
             for b in &self.block_buf {
                 match *b {
-                    DeflateLzssCode::Symbol(ref s) => {
+                    DeflateLzssCode::Symbol(s) => {
                         queue.push_back(InflateBitVec::BitVec(try!(
                             sym_enc
                                 .enc(s)
@@ -509,9 +509,9 @@ impl InflaterInner {
                         )));
                     }
                     DeflateLzssCode::Reference {
-                        ref len,
+                        len,
                         ref len_sub,
-                        ref pos,
+                        pos,
                         ref pos_sub,
                     } => {
                         queue.push_back(InflateBitVec::BitVec(try!(
@@ -531,7 +531,7 @@ impl InflaterInner {
             }
             queue.push_back(InflateBitVec::BitVec(try!(
                 sym_enc
-                    .enc(&256)
+                    .enc(256)
                     .map_err(|_| CompressionError::Unexpected)
             )));
         }
