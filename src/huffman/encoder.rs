@@ -38,7 +38,7 @@ where
 
     pub fn enc<U: NumCast + Clone>(
         &self,
-        data: &U,
+        data: U,
     ) -> Result<SmallBitVec<T>, String> {
         if let Some(idx) = cast::<_, usize>(data.clone()) {
             if idx < self.bit_vec_tab.len() {
@@ -81,35 +81,35 @@ mod tests {
             HuffmanEncoder::<Left, u16>::new(&[0_u8, 4, 4, 4, 4, 3, 3, 2, 2]);
 
         assert_eq!(
-            hencoder.enc(&(b'a' - 0x60)).ok(),
+            hencoder.enc(b'a' - 0x60).ok(),
             Some(SmallBitVec::new(0b1100, 4))
         );
         assert_eq!(
-            hencoder.enc(&(b'b' - 0x60)).ok(),
+            hencoder.enc(b'b' - 0x60).ok(),
             Some(SmallBitVec::new(0b1101, 4))
         );
         assert_eq!(
-            hencoder.enc(&(b'c' - 0x60)).ok(),
+            hencoder.enc(b'c' - 0x60).ok(),
             Some(SmallBitVec::new(0b1110, 4))
         );
         assert_eq!(
-            hencoder.enc(&(b'd' - 0x60)).ok(),
+            hencoder.enc(b'd' - 0x60).ok(),
             Some(SmallBitVec::new(0b1111, 4))
         );
         assert_eq!(
-            hencoder.enc(&(b'e' - 0x60)).ok(),
+            hencoder.enc(b'e' - 0x60).ok(),
             Some(SmallBitVec::new(0b100, 3))
         );
         assert_eq!(
-            hencoder.enc(&(b'f' - 0x60)).ok(),
+            hencoder.enc(b'f' - 0x60).ok(),
             Some(SmallBitVec::new(0b101, 3))
         );
         assert_eq!(
-            hencoder.enc(&(b'g' - 0x60)).ok(),
+            hencoder.enc(b'g' - 0x60).ok(),
             Some(SmallBitVec::new(0b00, 2))
         );
         assert_eq!(
-            hencoder.enc(&(b'h' - 0x60)).ok(),
+            hencoder.enc(b'h' - 0x60).ok(),
             Some(SmallBitVec::new(0b01, 2))
         );
     }
@@ -161,7 +161,7 @@ mod tests {
             b"abcdefgh"
                 .iter()
                 .map(|x| x - 0x60)
-                .map(|x| hencoder.enc(&x).unwrap())
+                .map(|x| hencoder.enc(x).unwrap())
                 .collect::<Vec<_>>(),
             vec![
                 SmallBitVec::new(0b0011, 4),

@@ -26,7 +26,7 @@ impl ::std::error::Error for CompressionError {
         self.description_in()
     }
 
-    fn cause(&self) -> Option<&::std::error::Error> {
+    fn cause(&self) -> Option<&dyn (::std::error::Error)> {
         None
     }
 }

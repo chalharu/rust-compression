@@ -73,7 +73,7 @@ where
     type Item = Result<u8, E::Error>;
 
     fn next(&mut self) -> Option<Result<u8, E::Error>> {
-        self.encoder.next(&mut self.inner, &self.action)
+        self.encoder.next(&mut self.inner, self.action)
     }
 }
 
@@ -85,6 +85,6 @@ where
     fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
-        action: &Action,
+        action: Action,
     ) -> Option<Result<u8, Self::Error>>;
 }

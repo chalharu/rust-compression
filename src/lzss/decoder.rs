@@ -30,7 +30,7 @@ impl LzssDecoder {
 
     pub fn next<E>(
         &mut self,
-        s: &mut Iterator<Item = Result<LzssCode, E>>,
+        s: &mut dyn Iterator<Item = Result<LzssCode, E>>,
     ) -> Result<Option<u8>, E> {
         while self.offset == 0 {
             match s.next() {
@@ -72,7 +72,7 @@ mod tests {
         let mut iter = testvec.iter().cloned();
         let enc_ret = (0..)
             .scan((), |_, _| {
-                encoder.next(&mut iter, &Action::Flush)
+                encoder.next(&mut iter, Action::Flush)
             })
             .collect::<Vec<_>>();
 
