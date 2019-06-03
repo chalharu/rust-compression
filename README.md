@@ -24,6 +24,8 @@ compression = "0.1"
 
 - **`lzhuf`** - Disabled by default.
 
+- **`lzss`** - Enabled by default.
+
 - **`std`** - By default, `compression` depends on libstd. However, it can be configured to use the unstable liballoc API instead, for use on platforms that have liballoc but not libstd. This configuration is currently unstable and is not guaranteed to work on all versions of Rust. To depend on `compression` without libstd, use default-features = false in the `compression` section of Cargo.toml to disable its "std" feature.
 
 ### Examples

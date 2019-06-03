@@ -151,10 +151,13 @@ impl LzhufEncoder {
     ) -> Option<Result<SmallBitVec<u16>, CompressionError>> {
         while self.queue.is_empty() {
             match self.lzss.next(iter, action) {
-                Some(ref s) => {
+                Some(Ok(ref s)) => {
                     if let Err(e) = self.inner.next(s, &mut self.queue) {
                         return Some(Err(e));
                     }
+                }
+                Some(Err(e)) => {
+                    return Some(Err(e));
                 }
                 None => {
                     if self.finished {
@@ -189,6 +192,8 @@ impl LzhufEncoder {
 
 impl Encoder for LzhufEncoder {
     type Error = CompressionError;
+    type In = u8;
+    type Out = u8;
     fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
