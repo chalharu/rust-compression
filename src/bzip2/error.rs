@@ -22,7 +22,7 @@ impl ::std::error::Error for BZip2Error {
         self.description_in()
     }
 
-    fn cause(&self) -> Option<& dyn (::std::error::Error)> {
+    fn cause(&self) -> Option<&dyn (::std::error::Error)> {
         None
     }
 }

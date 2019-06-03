@@ -13,9 +13,9 @@ use core::mem;
 use core::ops::Index;
 use core::slice;
 use core::u16;
+use lzss::compare_match_info;
 use lzss::LzssCode;
 use lzss::MatchInfo;
-use lzss::compare_match_info;
 
 struct HashTab {
     search_tab: Vec<u16>,
@@ -35,8 +35,10 @@ impl HashTab {
     #[cfg(target_pointer_width = "64")]
     const USIZE_WIDTH: usize = 64;
 
-    #[cfg(all(not(target_pointer_width = "64"),
-              not(target_pointer_width = "32")))]
+    #[cfg(all(
+        not(target_pointer_width = "64"),
+        not(target_pointer_width = "32")
+    ))]
     fn usize_width() -> usize {
         usize::count_zeros(0_usize)
     }
@@ -47,8 +49,10 @@ impl HashTab {
         Self::USIZE_WIDTH
     }
 
-    #[cfg(all(not(target_pointer_width = "64"),
-              not(target_pointer_width = "32")))]
+    #[cfg(all(
+        not(target_pointer_width = "64"),
+        not(target_pointer_width = "32")
+    ))]
     const HASH_FRAC: usize = 0x7A7C_4F9F_7A7C_4F9F;
 
     #[inline]
@@ -156,16 +160,8 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
         let icap = rawbuf.len();
         let cap = icap - 1;
         let p = self.buf.get_raw_pos();
-        pos1 = if p < pos1 {
-            icap + p - pos1
-        } else {
-            p - pos1
-        };
-        pos2 = if p < pos2 {
-            icap + p - pos2
-        } else {
-            p - pos2
-        };
+        pos1 = if p < pos1 { icap + p - pos1 } else { p - pos1 };
+        pos2 = if p < pos2 { icap + p - pos2 } else { p - pos2 };
 
         if pos1 > pos2 {
             mem::swap(&mut pos1, &mut pos2);
@@ -195,10 +191,7 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
         if self.buf.len() >= self.min_match {
             for i in 0..=(self.append_buf.len() - mm) {
                 let v = unsafe {
-                    slice::from_raw_parts(
-                        self.append_buf.as_ptr().add(i),
-                        mm,
-                    )
+                    slice::from_raw_parts(self.append_buf.as_ptr().add(i), mm)
                 };
                 self.push_pos(v);
             }
@@ -240,16 +233,21 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
                 pos: pos as u16,
             };
 
-            info = info.and_then(|iinfo: MatchInfo| {
-                if iinfo.len >= nlen
-                    || compare_match_info(&self.comparison, &iinfo, &new_info)
-                        == Ordering::Less
-                {
-                    Some(iinfo)
-                } else {
-                    None
-                }
-            }).or_else(|| Some(new_info));
+            info = info
+                .and_then(|iinfo: MatchInfo| {
+                    if iinfo.len >= nlen
+                        || compare_match_info(
+                            &self.comparison,
+                            &iinfo,
+                            &new_info,
+                        ) == Ordering::Less
+                    {
+                        Some(iinfo)
+                    } else {
+                        None
+                    }
+                })
+                .or_else(|| Some(new_info));
 
             if nlen == max_match {
                 pos_count = 0;

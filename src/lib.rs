@@ -34,10 +34,7 @@
 //! ```
 
 #![crate_type = "lib"]
-#![cfg_attr(feature = "clippy", feature(plugin))]
-#![cfg_attr(feature = "clippy", plugin(clippy))]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
 
 #[macro_use]
 extern crate cfg_if;

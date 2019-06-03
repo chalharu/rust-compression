@@ -83,11 +83,7 @@ fn induce_sa<T: Copy>(
         let mut bucket = bucket_builder.build(false);
 
         // compute sentinel
-        let k = if shift == 0 {
-            type_array.len()
-        } else {
-            shift
-        } - 1;
+        let k = if shift == 0 { type_array.len() } else { shift } - 1;
         let bk = bucket[k];
         suffix_array[bk] = k;
         bucket[k] = bk + 1;
@@ -95,11 +91,7 @@ fn induce_sa<T: Copy>(
         for i in 0..type_array.len() {
             let mut j = suffix_array[i];
             if j < usize::max_value() && j != shift {
-                j = if j == 0 {
-                    type_array.len()
-                } else {
-                    j
-                } - 1;
+                j = if j == 0 { type_array.len() } else { j } - 1;
                 if !type_array.get(j) {
                     let bj = bucket[j];
                     suffix_array[bj] = j;
@@ -114,11 +106,7 @@ fn induce_sa<T: Copy>(
         for i in (0..type_array.len()).rev() {
             let mut j = suffix_array[i];
             if j < usize::max_value() && j != shift {
-                j = if j == 0 {
-                    type_array.len()
-                } else {
-                    j
-                } - 1;
+                j = if j == 0 { type_array.len() } else { j } - 1;
                 if type_array.get(j) {
                     let bj = bucket[j] - 1;
                     bucket[j] = bj;
@@ -161,12 +149,7 @@ fn sa_is<T: Copy + PartialEq<T> + PartialOrd<T>>(
             suffix_array[bi] = i;
         }
     }
-    induce_sa(
-        &bucket_builder,
-        &type_array,
-        suffix_array,
-        shift,
-    );
+    induce_sa(&bucket_builder, &type_array, suffix_array, shift);
 
     // compact all the sorted substrings into
     // the first n1 items of SA
@@ -191,7 +174,9 @@ fn sa_is<T: Copy + PartialEq<T> + PartialOrd<T>>(
         let mut now = pos;
         let mut diff = false;
         loop {
-            if prev == usize::max_value() || now == shift || prev == shift
+            if prev == usize::max_value()
+                || now == shift
+                || prev == shift
                 || array[now] != array[prev]
                 || type_array.get(now) != type_array.get(prev)
             {
@@ -203,16 +188,8 @@ fn sa_is<T: Copy + PartialEq<T> + PartialOrd<T>>(
                 break;
             }
 
-            now = if now == count - 1 {
-                0
-            } else {
-                now + 1
-            };
-            prev = if prev == count - 1 {
-                0
-            } else {
-                prev + 1
-            };
+            now = if now == count - 1 { 0 } else { now + 1 };
+            prev = if prev == count - 1 { 0 } else { prev + 1 };
         }
         if diff {
             name += 1;
@@ -238,12 +215,7 @@ fn sa_is<T: Copy + PartialEq<T> + PartialOrd<T>>(
     // stage 2: solve the reduced problem
     // recurse if names are not yet unique
     let s1 = unsafe {
-        slice::from_raw_parts_mut(
-            suffix_array
-                .as_mut_ptr()
-                .add(count - n1),
-            n1,
-        )
+        slice::from_raw_parts_mut(suffix_array.as_mut_ptr().add(count - n1), n1)
     };
     if name < n1 {
         sa_is::<usize>(s1, suffix_array, 0, name - 1, 0);
@@ -285,12 +257,7 @@ fn sa_is<T: Copy + PartialEq<T> + PartialOrd<T>>(
         suffix_array[b2j] = j;
     }
 
-    induce_sa(
-        &bucket_builder,
-        &type_array,
-        suffix_array,
-        shift,
-    );
+    induce_sa(&bucket_builder, &type_array, suffix_array, shift);
 }
 
 pub fn bwt(array: &[u8], max_value: usize) -> Vec<usize> {
@@ -310,11 +277,7 @@ mod tests {
         let ret = bwt(src, u8::max_value() as usize);
         let mut bwt_ret = vec![0_u8; src.len()];
         for i in 0..bwt_ret.len() {
-            let j = if ret[i] == 0 {
-                bwt_ret.len()
-            } else {
-                ret[i]
-            } - 1;
+            let j = if ret[i] == 0 { bwt_ret.len() } else { ret[i] } - 1;
             bwt_ret[i] = src[j];
         }
         assert_eq!(bwt_ret, bwtstr);
@@ -355,38 +318,14 @@ mod tests {
 
     #[test]
     fn test_bwt2() {
-        test_bwt(
-            b"abracadabra0AbRa4Cad14abra",
-            b"ada104brRrd4arCcAaaaaaabbb",
-        );
-        test_bwt(
-            b"bracadabra0AbRa4Cad14abraa",
-            b"ada104brRrd4arCcAaaaaaabbb",
-        );
-        test_bwt(
-            b"racadabra0AbRa4Cad14abraab",
-            b"ada104brRrd4arCcAaaaaaabbb",
-        );
-        test_bwt(
-            b"acadabra0AbRa4Cad14abraabr",
-            b"ada104brRrd4arCcAaaaaaabbb",
-        );
-        test_bwt(
-            b"cadabra0AbRa4Cad14abraabra",
-            b"ada104brRrd4arCcAaaaaaabbb",
-        );
-        test_bwt(
-            b"adabra0AbRa4Cad14abraabrac",
-            b"ada104brRrd4arCcAaaaaaabbb",
-        );
-        test_bwt(
-            b"dabra0AbRa4Cad14abraabraca",
-            b"ada104brRrd4arCcAaaaaaabbb",
-        );
-        test_bwt(
-            b"abra0AbRa4Cad14abraabracad",
-            b"ada104brRrd4arCcAaaaaaabbb",
-        );
+        test_bwt(b"abracadabra0AbRa4Cad14abra", b"ada104brRrd4arCcAaaaaaabbb");
+        test_bwt(b"bracadabra0AbRa4Cad14abraa", b"ada104brRrd4arCcAaaaaaabbb");
+        test_bwt(b"racadabra0AbRa4Cad14abraab", b"ada104brRrd4arCcAaaaaaabbb");
+        test_bwt(b"acadabra0AbRa4Cad14abraabr", b"ada104brRrd4arCcAaaaaaabbb");
+        test_bwt(b"cadabra0AbRa4Cad14abraabra", b"ada104brRrd4arCcAaaaaaabbb");
+        test_bwt(b"adabra0AbRa4Cad14abraabrac", b"ada104brRrd4arCcAaaaaaabbb");
+        test_bwt(b"dabra0AbRa4Cad14abraabraca", b"ada104brRrd4arCcAaaaaaabbb");
+        test_bwt(b"abra0AbRa4Cad14abraabracad", b"ada104brRrd4arCcAaaaaaabbb");
     }
 
     #[test]
@@ -441,54 +380,18 @@ mod tests {
         // iaiaiabacaia 11
         // iaiaiaiabaca 9
         test_bwt(b"aiaiabacaiai", b"ibiiicaaaaaa");
-        test_bwtpos(
-            b"aiaiabacaiai",
-            &[4, 6, 2, 0, 10, 8, 5, 7, 3, 1, 11, 9],
-        );
-        test_bwtpos(
-            b"iaiabacaiaia",
-            &[3, 5, 1, 11, 9, 7, 4, 6, 2, 0, 10, 8],
-        );
-        test_bwtpos(
-            b"aiabacaiaiai",
-            &[2, 4, 0, 10, 8, 6, 3, 5, 1, 11, 9, 7],
-        );
-        test_bwtpos(
-            b"iabacaiaiaia",
-            &[1, 3, 11, 9, 7, 5, 2, 4, 0, 10, 8, 6],
-        );
-        test_bwtpos(
-            b"abacaiaiaiai",
-            &[0, 2, 10, 8, 6, 4, 1, 3, 11, 9, 7, 5],
-        );
-        test_bwtpos(
-            b"bacaiaiaiaia",
-            &[11, 1, 9, 7, 5, 3, 0, 2, 10, 8, 6, 4],
-        );
-        test_bwtpos(
-            b"acaiaiaiaiab",
-            &[10, 0, 8, 6, 4, 2, 11, 1, 9, 7, 5, 3],
-        );
-        test_bwtpos(
-            b"caiaiaiaiaba",
-            &[9, 11, 7, 5, 3, 1, 10, 0, 8, 6, 4, 2],
-        );
-        test_bwtpos(
-            b"aiaiaiaiabac",
-            &[8, 10, 6, 4, 2, 0, 9, 11, 7, 5, 3, 1],
-        );
-        test_bwtpos(
-            b"iaiaiaiabaca",
-            &[7, 9, 5, 3, 1, 11, 8, 10, 6, 4, 2, 0],
-        );
-        test_bwtpos(
-            b"aiaiaiabacai",
-            &[6, 8, 4, 2, 0, 10, 7, 9, 5, 3, 1, 11],
-        );
-        test_bwtpos(
-            b"iaiaiabacaia",
-            &[5, 7, 3, 1, 11, 9, 6, 8, 4, 2, 0, 10],
-        );
+        test_bwtpos(b"aiaiabacaiai", &[4, 6, 2, 0, 10, 8, 5, 7, 3, 1, 11, 9]);
+        test_bwtpos(b"iaiabacaiaia", &[3, 5, 1, 11, 9, 7, 4, 6, 2, 0, 10, 8]);
+        test_bwtpos(b"aiabacaiaiai", &[2, 4, 0, 10, 8, 6, 3, 5, 1, 11, 9, 7]);
+        test_bwtpos(b"iabacaiaiaia", &[1, 3, 11, 9, 7, 5, 2, 4, 0, 10, 8, 6]);
+        test_bwtpos(b"abacaiaiaiai", &[0, 2, 10, 8, 6, 4, 1, 3, 11, 9, 7, 5]);
+        test_bwtpos(b"bacaiaiaiaia", &[11, 1, 9, 7, 5, 3, 0, 2, 10, 8, 6, 4]);
+        test_bwtpos(b"acaiaiaiaiab", &[10, 0, 8, 6, 4, 2, 11, 1, 9, 7, 5, 3]);
+        test_bwtpos(b"caiaiaiaiaba", &[9, 11, 7, 5, 3, 1, 10, 0, 8, 6, 4, 2]);
+        test_bwtpos(b"aiaiaiaiabac", &[8, 10, 6, 4, 2, 0, 9, 11, 7, 5, 3, 1]);
+        test_bwtpos(b"iaiaiaiabaca", &[7, 9, 5, 3, 1, 11, 8, 10, 6, 4, 2, 0]);
+        test_bwtpos(b"aiaiaiabacai", &[6, 8, 4, 2, 0, 10, 7, 9, 5, 3, 1, 11]);
+        test_bwtpos(b"iaiaiabacaia", &[5, 7, 3, 1, 11, 9, 6, 8, 4, 2, 0, 10]);
     }
 
     #[test]
@@ -512,9 +415,7 @@ mod tests {
         test_bwt(b"iaibiaiciaiciaib", b"iiiiiiiicbcbaaaa");
         test_bwtpos(
             b"iaibiaiciaiciaib",
-            &[
-                13, 1, 9, 5, 15, 3, 11, 7, 12, 0, 8, 4, 14, 2, 10, 6
-            ],
+            &[13, 1, 9, 5, 15, 3, 11, 7, 12, 0, 8, 4, 14, 2, 10, 6],
         );
     }
 
@@ -539,99 +440,67 @@ mod tests {
         test_bwt(b"cacbdafacacbdaga", b"gfccddccaaaabbaa");
         test_bwtpos(
             b"cacbdafacacbdaga",
-            &[
-                15, 7, 1, 9, 5, 13, 3, 11, 0, 8, 2, 10, 4, 12, 6, 14
-            ],
+            &[15, 7, 1, 9, 5, 13, 3, 11, 0, 8, 2, 10, 4, 12, 6, 14],
         );
         test_bwtpos(
             b"acbdafacacbdagac",
-            &[
-                14, 6, 0, 8, 4, 12, 2, 10, 15, 7, 1, 9, 3, 11, 5, 13
-            ],
+            &[14, 6, 0, 8, 4, 12, 2, 10, 15, 7, 1, 9, 3, 11, 5, 13],
         );
         test_bwtpos(
             b"cbdafacacbdagaca",
-            &[
-                13, 5, 15, 7, 3, 11, 1, 9, 14, 6, 0, 8, 2, 10, 4, 12
-            ],
+            &[13, 5, 15, 7, 3, 11, 1, 9, 14, 6, 0, 8, 2, 10, 4, 12],
         );
         test_bwtpos(
             b"bdafacacbdagacac",
-            &[
-                12, 4, 14, 6, 2, 10, 0, 8, 13, 5, 15, 7, 1, 9, 3, 11
-            ],
+            &[12, 4, 14, 6, 2, 10, 0, 8, 13, 5, 15, 7, 1, 9, 3, 11],
         );
         test_bwtpos(
             b"dafacacbdagacacb",
-            &[
-                11, 3, 13, 5, 1, 9, 15, 7, 12, 4, 14, 6, 0, 8, 2, 10
-            ],
+            &[11, 3, 13, 5, 1, 9, 15, 7, 12, 4, 14, 6, 0, 8, 2, 10],
         );
         test_bwtpos(
             b"afacacbdagacacbd",
-            &[
-                10, 2, 12, 4, 0, 8, 14, 6, 11, 3, 13, 5, 15, 7, 1, 9
-            ],
+            &[10, 2, 12, 4, 0, 8, 14, 6, 11, 3, 13, 5, 15, 7, 1, 9],
         );
         test_bwtpos(
             b"facacbdagacacbda",
-            &[
-                9, 1, 11, 3, 15, 7, 13, 5, 10, 2, 12, 4, 14, 6, 0, 8
-            ],
+            &[9, 1, 11, 3, 15, 7, 13, 5, 10, 2, 12, 4, 14, 6, 0, 8],
         );
         test_bwtpos(
             b"acacbdagacacbdaf",
-            &[
-                8, 0, 10, 2, 14, 6, 12, 4, 9, 1, 11, 3, 13, 5, 15, 7
-            ],
+            &[8, 0, 10, 2, 14, 6, 12, 4, 9, 1, 11, 3, 13, 5, 15, 7],
         );
         test_bwtpos(
             b"cacbdagacacbdafa",
-            &[
-                7, 15, 9, 1, 13, 5, 11, 3, 8, 0, 10, 2, 12, 4, 14, 6
-            ],
+            &[7, 15, 9, 1, 13, 5, 11, 3, 8, 0, 10, 2, 12, 4, 14, 6],
         );
         test_bwtpos(
             b"acbdagacacbdafac",
-            &[
-                6, 14, 8, 0, 12, 4, 10, 2, 7, 15, 9, 1, 11, 3, 13, 5
-            ],
+            &[6, 14, 8, 0, 12, 4, 10, 2, 7, 15, 9, 1, 11, 3, 13, 5],
         );
         test_bwtpos(
             b"cbdagacacbdafaca",
-            &[
-                5, 13, 7, 15, 11, 3, 9, 1, 6, 14, 8, 0, 10, 2, 12, 4
-            ],
+            &[5, 13, 7, 15, 11, 3, 9, 1, 6, 14, 8, 0, 10, 2, 12, 4],
         );
         test_bwtpos(
             b"bdagacacbdafacac",
-            &[
-                4, 12, 6, 14, 10, 2, 8, 0, 5, 13, 7, 15, 9, 1, 11, 3
-            ],
+            &[4, 12, 6, 14, 10, 2, 8, 0, 5, 13, 7, 15, 9, 1, 11, 3],
         );
         test_bwtpos(
             b"dagacacbdafacacb",
-            &[
-                3, 11, 5, 13, 9, 1, 7, 15, 4, 12, 6, 14, 8, 0, 10, 2
-            ],
+            &[3, 11, 5, 13, 9, 1, 7, 15, 4, 12, 6, 14, 8, 0, 10, 2],
         );
         test_bwtpos(
             b"agacacbdafacacbd",
-            &[
-                2, 10, 4, 12, 8, 0, 6, 14, 3, 11, 5, 13, 7, 15, 9, 1
-            ],
+            &[2, 10, 4, 12, 8, 0, 6, 14, 3, 11, 5, 13, 7, 15, 9, 1],
         );
         test_bwtpos(
             b"gacacbdafacacbda",
-            &[
-                1, 9, 3, 11, 7, 15, 5, 13, 2, 10, 4, 12, 6, 14, 8, 0
-            ],
+            &[1, 9, 3, 11, 7, 15, 5, 13, 2, 10, 4, 12, 6, 14, 8, 0],
         );
         test_bwtpos(
             b"acacbdafacacbdag",
-            &[
-                0, 8, 2, 10, 6, 14, 4, 12, 1, 9, 3, 11, 5, 13, 7, 15
-            ],
+            &[0, 8, 2, 10, 6, 14, 4, 12, 1, 9, 3, 11, 5, 13, 7, 15],
         );
     }
 
@@ -671,9 +540,7 @@ mod tests {
         //  8 4414241423241220
         test_bwtpos(
             &[2, 3, 2, 4, 1, 2, 2, 0, 4, 4, 1, 4, 2, 4, 1, 4],
-            &[
-                7, 4, 14, 10, 6, 5, 0, 2, 12, 1, 3, 13, 9, 15, 11, 8
-            ],
+            &[7, 4, 14, 10, 6, 5, 0, 2, 12, 1, 3, 13, 9, 15, 11, 8],
         );
     }
 
@@ -681,9 +548,7 @@ mod tests {
     fn test_bwt12() {
         test_bwtpos(
             b"2324122044142414",
-            &[
-                7, 4, 14, 10, 6, 5, 0, 2, 12, 1, 3, 13, 9, 15, 11, 8
-            ],
+            &[7, 4, 14, 10, 6, 5, 0, 2, 12, 1, 3, 13, 9, 15, 11, 8],
         );
     }
 }

@@ -37,11 +37,7 @@ where
             .bucket_sort_all_by_key(|x| *x.1)
             .into_iter()
             .scan((0, T::from(0)), move |c, (s, &l)| {
-                let code = c.1.clone() << if c.0 < l {
-                    l - c.0
-                } else {
-                    0
-                };
+                let code = c.1.clone() << if c.0 < l { l - c.0 } else { 0 };
                 *c = (l, code.clone() + T::from(1));
                 Some((
                     s,
@@ -56,9 +52,7 @@ where
             .bucket_sort_by_key(|x| x.0, min_symb, max_symb)
             .into_iter()
             .scan(0, move |c, (s, v)| {
-                let r = vec![None; s - *c]
-                    .into_iter()
-                    .chain(vec![Some(v)]);
+                let r = vec![None; s - *c].into_iter().chain(vec![Some(v)]);
                 *c = s + 1;
                 Some(r)
             })
@@ -74,9 +68,9 @@ mod tests {
     use action::Action;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use bitio::direction::Direction;
     use bitio::direction::left::Left;
     use bitio::direction::right::Right;
+    use bitio::direction::Direction;
     use bitio::reader::BitReader;
     use bitio::writer::{BitWriteExt, BitWriter};
     use huffman::decoder::HuffmanDecoder;

@@ -71,9 +71,7 @@ mod tests {
         let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
         let mut iter = testvec.iter().cloned();
         let enc_ret = (0..)
-            .scan((), |_, _| {
-                encoder.next(&mut iter, Action::Flush)
-            })
+            .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
             .collect::<Vec<_>>();
 
         let mut decoder = LzssDecoder::new(0x1_0000);

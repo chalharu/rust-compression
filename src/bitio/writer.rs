@@ -149,7 +149,8 @@ where
             self.buf,
             size_of::<T>() << 3,
             size_of::<u8>() << 3,
-        )).unwrap();
+        ))
+        .unwrap();
 
         self.buf = D::forward(self.buf, size_of::<u8>() << 3);
         self.buflen -= 1;
@@ -213,7 +214,8 @@ impl<D: Direction> BitWriter<D> {
             },
             size_of::<T>() << 3,
             size_of::<u8>() << 3,
-        )).unwrap();
+        ))
+        .unwrap();
         self.counter = clen - (wlen << 3);
         (wdata, wlen)
     }
@@ -253,8 +255,9 @@ mod tests {
             SmallBitVec::new(0b10, 2),
             SmallBitVec::new(0b011, 3),
             SmallBitVec::new(0b00, 2),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
 
         assert_eq!(ret, vec![0b1100_1100_u8]);
     }
@@ -266,8 +269,9 @@ mod tests {
             SmallBitVec::new(975_u32, 10),
             SmallBitVec::new(475, 10),
             SmallBitVec::new(3784, 12),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
         assert_eq!(ret, vec![243, 221, 190, 200]);
     }
 
@@ -278,8 +282,9 @@ mod tests {
             SmallBitVec::new(1_u32, 1),
             SmallBitVec::new(2, 2),
             SmallBitVec::new(3, 3),
-        ].to_bytes(&mut writer, Action::Run)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Run)
+        .collect::<Vec<_>>();
         assert_eq!(ret.len(), 0);
         let ret = vec![SmallBitVec::<u32>::default(); 0]
             .to_bytes(&mut writer, Action::Flush)
@@ -307,8 +312,9 @@ mod tests {
             SmallBitVec::new(0, 3),
             SmallBitVec::new(0, 4),
             SmallBitVec::new(0, 12),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
         assert_eq!(ret, vec![0, 0, 0, 0]);
     }
 
@@ -320,8 +326,9 @@ mod tests {
             SmallBitVec::new(0b10, 2),
             SmallBitVec::new(0b011, 3),
             SmallBitVec::new(0b00, 2),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
 
         assert_eq!(ret, vec![0b0001_1101]);
     }
@@ -333,8 +340,9 @@ mod tests {
             SmallBitVec::new(975_u32, 10),
             SmallBitVec::new(475, 10),
             SmallBitVec::new(3784, 12),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
         assert_eq!(ret, vec![0xCF, 0x6F, 0x87, 0xEC]);
     }
 
@@ -345,8 +353,9 @@ mod tests {
             SmallBitVec::new(1_u32, 1),
             SmallBitVec::new(2, 2),
             SmallBitVec::new(3, 3),
-        ].to_bytes(&mut writer, Action::Run)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Run)
+        .collect::<Vec<_>>();
         assert_eq!(ret.len(), 0);
         let ret = vec![SmallBitVec::<u32>::default(); 0]
             .to_bytes(&mut writer, Action::Flush)
@@ -361,8 +370,9 @@ mod tests {
             SmallBitVec::new(1_u8, 1),
             SmallBitVec::new(2, 2),
             SmallBitVec::new(3, 3),
-        ].to_bytes(&mut writer, Action::Run)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Run)
+        .collect::<Vec<_>>();
         assert_eq!(ret.len(), 0);
         let ret = vec![SmallBitVec::<u8>::default(); 0]
             .to_bytes(&mut writer, Action::Flush)
@@ -377,8 +387,9 @@ mod tests {
             SmallBitVec::new(1_u16, 1),
             SmallBitVec::new(2, 2),
             SmallBitVec::new(3, 3),
-        ].to_bytes(&mut writer, Action::Run)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Run)
+        .collect::<Vec<_>>();
         assert_eq!(ret.len(), 0);
         let ret = vec![SmallBitVec::<u16>::default(); 0]
             .to_bytes(&mut writer, Action::Flush)
@@ -393,8 +404,9 @@ mod tests {
             SmallBitVec::new(1_u64, 1),
             SmallBitVec::new(2, 2),
             SmallBitVec::new(3, 3),
-        ].to_bytes(&mut writer, Action::Run)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Run)
+        .collect::<Vec<_>>();
         assert_eq!(ret.len(), 0);
         let ret = vec![SmallBitVec::<u64>::default(); 0]
             .to_bytes(&mut writer, Action::Flush)
@@ -422,8 +434,9 @@ mod tests {
             SmallBitVec::new(0, 3),
             SmallBitVec::new(0, 4),
             SmallBitVec::new(0, 12),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
         assert_eq!(ret, vec![0, 0, 0, 0]);
     }
 }

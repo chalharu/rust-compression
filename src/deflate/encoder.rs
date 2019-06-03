@@ -7,22 +7,23 @@
 
 use action::Action;
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-#[cfg(not(feature = "std"))]
 use alloc::collections::vec_deque::VecDeque;
-use bitio::direction::Direction;
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 use bitio::direction::right::Right;
+use bitio::direction::Direction;
 use bitio::small_bit_vec::SmallBitVec;
 use bitio::writer::BitWriter;
 use cbuffer::CircularBuffer;
 use core::cmp::{self, Ordering};
-use deflate::{fix_offset_table, fix_symbol_table, gen_len_tab, gen_off_tab,
-              CodeTable};
+use deflate::{
+    fix_offset_table, fix_symbol_table, gen_len_tab, gen_off_tab, CodeTable,
+};
 use error::CompressionError;
 use huffman::cano_huff_table::make_table;
 use huffman::encoder::HuffmanEncoder;
-use lzss::LzssCode;
 use lzss::encoder::LzssEncoder;
+use lzss::LzssCode;
 #[cfg(feature = "std")]
 use std::collections::vec_deque::VecDeque;
 use traits::encoder::Encoder;
@@ -38,9 +39,7 @@ fn lzss_comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
                 len: rlen,
                 pos: rpos,
             },
-        ) => ((llen << 3) + lpos)
-            .cmp(&((rlen << 3) + rpos))
-            .reverse(),
+        ) => ((llen << 3) + lpos).cmp(&((rlen << 3) + rpos)).reverse(),
         (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
         (_, LzssCode::Symbol(_)) => Ordering::Greater,
         (LzssCode::Symbol(_), _) => Ordering::Less,
@@ -207,9 +206,9 @@ impl Encoder for Inflater {
                     self.writer.write_bits(s)
                 }
                 Some(Ok(InflateBitVec::Byte(s))) => return Some(Ok(s)),
-                Some(Ok(InflateBitVec::Flush)) => self.writer
-                    .flush::<u16>()
-                    .unwrap_or_else(|| (0, 0)),
+                Some(Ok(InflateBitVec::Flush)) => {
+                    self.writer.flush::<u16>().unwrap_or_else(|| (0, 0))
+                }
                 None => {
                     if self.bit_finished {
                         self.bit_finished = false;
@@ -381,7 +380,7 @@ impl InflaterInner {
         let len_enc_tab = make_table(&lenfreq, 7);
 
         let len_map = [
-            3, 17, 15, 13, 11, 9, 7, 5, 4, 6, 8, 10, 12, 14, 16, 18, 0, 1, 2
+            3, 17, 15, 13, 11, 9, 7, 5, 4, 6, 8, 10, 12, 14, 16, 18, 0, 1, 2,
         ];
         // let len_map = [16, 17, 18, 0, 8, 7, 9, 6, 10,
         //                5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
@@ -400,7 +399,8 @@ impl InflaterInner {
             .filter(|&(_, &s)| s != 0)
             .last()
             .unwrap()
-            .0 - 256;
+            .0
+            - 256;
         let hdist = off_enc_tab
             .iter()
             .enumerate()
@@ -446,7 +446,8 @@ impl InflaterInner {
         let custom_huffman_header =
             Self::create_custom_huffman_table(&sym_enc_tab, &off_enc_tab);
 
-        let custom_haffman_size = self.cals_comp_len(&sym_enc_tab, &off_enc_tab)
+        let custom_haffman_size = self
+            .cals_comp_len(&sym_enc_tab, &off_enc_tab)
             + custom_huffman_header
                 .iter()
                 .fold(0, |s, v| v.len() as u64 + s);
@@ -502,11 +503,11 @@ impl InflaterInner {
             for b in &self.block_buf {
                 match *b {
                     DeflateLzssCode::Symbol(s) => {
-                        queue.push_back(InflateBitVec::BitVec(try!(
+                        queue.push_back(InflateBitVec::BitVec(
                             sym_enc
                                 .enc(s)
-                                .map_err(|_| CompressionError::Unexpected)
-                        )));
+                                .map_err(|_| CompressionError::Unexpected)?,
+                        ));
                     }
                     DeflateLzssCode::Reference {
                         len,
@@ -514,26 +515,24 @@ impl InflaterInner {
                         pos,
                         ref pos_sub,
                     } => {
-                        queue.push_back(InflateBitVec::BitVec(try!(
+                        queue.push_back(InflateBitVec::BitVec(
                             sym_enc
                                 .enc(len)
-                                .map_err(|_| CompressionError::Unexpected)
-                        )));
+                                .map_err(|_| CompressionError::Unexpected)?,
+                        ));
                         queue.push_back(InflateBitVec::BitVec(len_sub.clone()));
-                        queue.push_back(InflateBitVec::BitVec(try!(
+                        queue.push_back(InflateBitVec::BitVec(
                             off_enc
                                 .enc(pos)
-                                .map_err(|_| CompressionError::Unexpected)
-                        )));
+                                .map_err(|_| CompressionError::Unexpected)?,
+                        ));
                         queue.push_back(InflateBitVec::BitVec(pos_sub.clone()));
                     }
                 }
             }
-            queue.push_back(InflateBitVec::BitVec(try!(
-                sym_enc
-                    .enc(256)
-                    .map_err(|_| CompressionError::Unexpected)
-            )));
+            queue.push_back(InflateBitVec::BitVec(
+                sym_enc.enc(256).map_err(|_| CompressionError::Unexpected)?,
+            ));
         }
         self.init_block();
         Ok(())
@@ -545,11 +544,13 @@ impl InflaterInner {
             .enumerate()
             .zip(self.symbol_freq.iter())
             .map(|((i, &l), &f)| {
-                f as u64 * (u64::from(l) + if i >= 257 {
-                    self.len_tab.ext_bits(i - 257) as u64
-                } else {
-                    0
-                })
+                f as u64
+                    * (u64::from(l)
+                        + if i >= 257 {
+                            self.len_tab.ext_bits(i - 257) as u64
+                        } else {
+                            0
+                        })
             })
             .sum::<u64>()
             + off_enc_tab
@@ -579,7 +580,7 @@ impl InflaterInner {
             && self.decompress_len != 0)
             || (self.block_buf.len() == Self::MAX_BLOCK_SIZE)
         {
-            try!(self.write_block(false, queue));
+            self.write_block(false, queue)?;
             self.decompress_len = next_len;
         } else {
             self.decompress_len = new_len;
@@ -652,7 +653,8 @@ mod tests {
     #[test]
     fn test_empty() {
         let mut encoder = Inflater::new();
-        let ret = [].iter()
+        let ret = []
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -669,7 +671,8 @@ mod tests {
     #[test]
     fn test_unit() {
         let mut encoder = Inflater::new();
-        let ret = b"a".iter()
+        let ret = b"a"
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -742,8 +745,9 @@ mod tests {
             SmallBitVec::new(24, 5),  // 3
             SmallBitVec::new(0, 0),   //
             SmallBitVec::new(0, 7),   // 256
-        ].to_bytes(BitWriter::<Right>::new(), Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(BitWriter::<Right>::new(), Action::Flush)
+        .collect::<Vec<_>>();
 
         assert_eq!(a, Ok(b));
     }
@@ -776,7 +780,8 @@ mod tests {
                 .collect::<Vec<_>>()),
         );
 
-        let b = r.to_bytes(BitWriter::<Right>::new(), Action::Flush)
+        let b = r
+            .to_bytes(BitWriter::<Right>::new(), Action::Flush)
             .collect::<Vec<_>>();
 
         assert_eq!(a, Ok(b));
@@ -1004,7 +1009,8 @@ mod tests {
             SmallBitVec::new(44, 6),
         ];
 
-        let b = r.to_bytes(BitWriter::<Right>::new(), Action::Flush)
+        let b = r
+            .to_bytes(BitWriter::<Right>::new(), Action::Flush)
             .collect::<Vec<_>>();
 
         assert_eq!(a, Ok(b));
@@ -1105,10 +1111,7 @@ mod tests {
         );
         assert_eq!(
             DeflateLzssCode::from_with_codetab(
-                &LzssCode::Reference {
-                    len: 10,
-                    pos: 7
-                },
+                &LzssCode::Reference { len: 10, pos: 7 },
                 &gen_len_tab(),
                 &gen_off_tab(),
             ),
@@ -1121,10 +1124,7 @@ mod tests {
         );
         assert_eq!(
             DeflateLzssCode::from_with_codetab(
-                &LzssCode::Reference {
-                    len: 11,
-                    pos: 8
-                },
+                &LzssCode::Reference { len: 11, pos: 8 },
                 &gen_len_tab(),
                 &gen_off_tab(),
             ),
@@ -1137,10 +1137,7 @@ mod tests {
         );
         assert_eq!(
             DeflateLzssCode::from_with_codetab(
-                &LzssCode::Reference {
-                    len: 12,
-                    pos: 9
-                },
+                &LzssCode::Reference { len: 12, pos: 9 },
                 &gen_len_tab(),
                 &gen_off_tab(),
             ),
@@ -1153,10 +1150,7 @@ mod tests {
         );
         assert_eq!(
             DeflateLzssCode::from_with_codetab(
-                &LzssCode::Reference {
-                    len: 13,
-                    pos: 10
-                },
+                &LzssCode::Reference { len: 13, pos: 10 },
                 &gen_len_tab(),
                 &gen_off_tab(),
             ),

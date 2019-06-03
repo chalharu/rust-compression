@@ -155,23 +155,23 @@ mod tests {
     #[test]
     fn test_unit() {
         let mut encoder = ZlibEncoder::new();
-        let ret = b"a".iter()
+        let ret = b"a"
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
 
         assert_eq!(
             ret,
-            Ok(vec![
-                0x78, 0xDA, 0x4B, 0x04, 0x00, 0x00, 0x62, 0x00, 0x62
-            ])
+            Ok(vec![0x78, 0xDA, 0x4B, 0x04, 0x00, 0x00, 0x62, 0x00, 0x62])
         );
     }
 
     #[test]
     fn test_unit_with_dict() {
         let mut encoder = ZlibEncoder::with_dict(b"a");
-        let ret = b"a".iter()
+        let ret = b"a"
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
