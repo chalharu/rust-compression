@@ -13,7 +13,7 @@ use error::CompressionError;
 
 pub trait DecodeExt<I, R>
 where
-    I: Iterator<Item = u8>,
+    I: Iterator,
 {
     fn decode<E: Decoder<R>>(self, decoder: &mut E) -> DecodeIterator<R, E, R>
     where

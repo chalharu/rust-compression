@@ -7,6 +7,8 @@
 
 use cbuffer::CircularBuffer;
 use lzss::LzssCode;
+use error::CompressionError;
+use traits::decoder::{Decoder, DecodeExt};
 
 pub struct LzssDecoder {
     buf: CircularBuffer<u8>,
@@ -21,17 +23,25 @@ impl LzssDecoder {
         }
     }
 
-    #[cfg(feature = "deflate")]
     pub fn with_dict(size_of_window: usize, dict: &[u8]) -> Self {
         let mut buf = CircularBuffer::new(size_of_window);
         buf.append(dict);
         Self { buf, offset: 0 }
     }
+}
 
-    pub fn next<E>(
+impl<R, E> Decoder<R> for LzssDecoder
+where
+    R: Iterator<Item = Result<LzssCode, E>>,
+    CompressionError: From<E>,
+{
+    type Error = E;
+    type Output = u8;
+
+    fn next(
         &mut self,
-        s: &mut dyn Iterator<Item = Result<LzssCode, E>>,
-    ) -> Result<Option<u8>, E> {
+        s: &mut R,
+    ) -> Result<Option<Self::Output>, Self::Error> {
         while self.offset == 0 {
             match s.next() {
                 Some(Err(e)) => return Err(e),
@@ -64,6 +74,7 @@ mod tests {
     use alloc::vec::Vec;
     use lzss::encoder::LzssEncoder;
     use lzss::tests::comparison;
+    use traits::encoder::Encoder;
 
     #[test]
     fn test() {
@@ -72,10 +83,11 @@ mod tests {
         let mut iter = testvec.iter().cloned();
         let enc_ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         let mut decoder = LzssDecoder::new(0x1_0000);
-        let mut dec_iter = enc_ret.into_iter().map::<Result<_, ()>, _>(Ok);
+        let mut dec_iter = enc_ret.into_iter().map::<Result<_, CompressionError>, _>(Ok);
         let ret = (0..)
             .scan((), |_, _| decoder.next(&mut dec_iter).unwrap())
             .collect::<Vec<_>>();
