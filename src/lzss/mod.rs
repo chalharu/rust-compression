@@ -62,9 +62,7 @@ mod tests {
                     len: rlen,
                     pos: rpos,
                 },
-            ) => ((llen << 3) + rpos)
-                .cmp(&((rlen << 3) + lpos))
-                .reverse(),
+            ) => ((llen << 3) + rpos).cmp(&((rlen << 3) + lpos)).reverse(),
             (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
             (_, LzssCode::Symbol(_)) => Ordering::Greater,
             (LzssCode::Symbol(_), _) => Ordering::Less,

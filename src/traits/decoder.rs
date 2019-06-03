@@ -28,7 +28,7 @@ where
     fn decode<E: Decoder<BitReader<D, I::IntoIter>>>(
         self,
         decoder: &mut E,
-    ) -> DecodeIterator<BitReader<D, I::IntoIter>, E, BitReader<D, I::IntoIter>>
+    ) -> DecodeBitIterator<D, I::IntoIter, E>
     where
         D: Direction,
         E: Decoder<BitReader<D, I::IntoIter>>,
@@ -41,6 +41,9 @@ where
         >::new(BitReader::<D, _>::new(self.into_iter()), decoder)
     }
 }
+
+type DecodeBitIterator<'a, D, I, E> =
+    DecodeIterator<'a, BitReader<D, I>, E, BitReader<D, I>>;
 
 pub struct DecodeIterator<'a, R, E, B>
 where

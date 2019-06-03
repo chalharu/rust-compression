@@ -54,7 +54,8 @@ impl<T: Clone> BucketSort for [T] {
 
         for i in 0..self.len() {
             bucket[cast::<_, usize>(key_selector(&self[i]) - min.clone())
-                       .unwrap() + 1] += 1;
+                .unwrap()
+                + 1] += 1;
         }
         for i in 2..bucket.len() {
             bucket[i] += bucket[i - 1];

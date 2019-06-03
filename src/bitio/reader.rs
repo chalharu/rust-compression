@@ -105,11 +105,7 @@ impl<D: Direction, R: Iterator<Item = u8>> BitRead<D> for BitReader<D, R> {
             })
         } else {
             Ok(SmallBitVec::new(
-                D::convert(
-                    T::from(self.buf),
-                    size_of::<u8>() << 3,
-                    firstlen,
-                ),
+                D::convert(T::from(self.buf), size_of::<u8>() << 3, firstlen),
                 firstlen,
             ))
         }
@@ -165,7 +161,7 @@ impl<D: Direction, R: Iterator<Item = u8>> BitRead<D> for BitReader<D, R> {
     {
         let r = self.peek_bits::<T>(len);
         if let Ok(ref l) = r {
-            try!(self.skip_bits(l.len()));
+            self.skip_bits(l.len())?;
         }
         r
     }
@@ -214,11 +210,7 @@ impl<D: Direction, R: Iterator<Item = u8>> BitReader<D, R> {
     where
         T: Shl<usize, Output = T> + Shr<usize, Output = T> + From<u8>,
     {
-        D::convert(
-            T::from(value),
-            size_of::<u8>() << 3,
-            size_of::<T>() << 3,
-        )
+        D::convert(T::from(value), size_of::<u8>() << 3, size_of::<T>() << 3)
     }
 }
 
@@ -326,8 +318,9 @@ mod tests {
             SmallBitVec::new(0b10, 2),
             SmallBitVec::new(0b011, 3),
             SmallBitVec::new(0b00, 2),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
 
         let mut reader = BitReader::<Left, _>::new(ret);
 
@@ -372,8 +365,9 @@ mod tests {
             SmallBitVec::new(975_u32, 10),
             SmallBitVec::new(475, 10),
             SmallBitVec::new(3784, 12),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
 
         let mut reader = BitReader::<Left, _>::new(ret);
 
@@ -414,8 +408,9 @@ mod tests {
             SmallBitVec::new(0, 3),
             SmallBitVec::new(3, 2),
             SmallBitVec::new(0, 3),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
 
         let mut reader = BitReader::<Left, _>::new(ret);
 
@@ -457,8 +452,9 @@ mod tests {
             SmallBitVec::new(0b10, 2),
             SmallBitVec::new(0b011, 3),
             SmallBitVec::new(0b00, 2),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
 
         let mut reader = BitReader::<Left, _>::new(ret);
 
@@ -491,8 +487,9 @@ mod tests {
             SmallBitVec::new(975_u32, 10),
             SmallBitVec::new(475, 10),
             SmallBitVec::new(3784, 12),
-        ].to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+        ]
+        .to_bytes(&mut writer, Action::Flush)
+        .collect::<Vec<_>>();
 
         let mut reader = BitReader::<Left, _>::new(ret);
 

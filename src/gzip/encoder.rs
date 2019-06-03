@@ -69,7 +69,7 @@ impl GZipEncoder {
             inflater: Inflater::new(),
             crc32: Some(IEEE_REVERSE.build_hasher()),
             header: [
-                0x1F, 0x8B, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF
+                0x1F, 0x8B, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF,
             ],
             header_len: 10,
             hash: None,
@@ -141,7 +141,8 @@ mod tests {
     #[test]
     fn test_unit() {
         let mut encoder = GZipEncoder::new();
-        let ret = b"a".iter()
+        let ret = b"a"
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();

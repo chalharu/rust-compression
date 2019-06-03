@@ -32,11 +32,7 @@ where
             *d = sum;
             sum += val;
         }
-        Self {
-            array,
-            data,
-            min,
-        }
+        Self { array, data, min }
     }
 
     pub fn build(&self, has_end: bool) -> Bucket<'a, T> {
@@ -62,11 +58,7 @@ pub(crate) struct Bucket<'a, T: 'a> {
 
 impl<'a, T> Bucket<'a, T> {
     pub fn new(array: &'a [T], data: Box<[usize]>, min: usize) -> Self {
-        Self {
-            array,
-            data,
-            min,
-        }
+        Self { array, data, min }
     }
 }
 

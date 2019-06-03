@@ -53,7 +53,8 @@ mod tests {
             ])
         );
 
-        let ret2 = ret.unwrap()
+        let ret2 = ret
+            .unwrap()
             .iter()
             .cloned()
             .decode(&mut BZip2Decoder::new())
@@ -145,11 +146,7 @@ mod tests {
     #[test]
     fn test_long() {
         setup();
-        let data = b"a".iter()
-                .cycle()
-                .take(1000)
-                .cloned()
-                .collect::<Vec<u8>>();
+        let data = b"a".iter().cycle().take(1000).cloned().collect::<Vec<u8>>();
 
         let compressed = data
             .iter()
@@ -157,7 +154,8 @@ mod tests {
             .encode(&mut BZip2Encoder::new(9), Action::Finish)
             .collect::<Result<Vec<_>, _>>();
 
-        let decompressed = compressed.unwrap()
+        let decompressed = compressed
+            .unwrap()
             .iter()
             .cloned()
             .decode(&mut BZip2Decoder::new())

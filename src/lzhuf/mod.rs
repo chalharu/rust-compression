@@ -44,9 +44,9 @@ mod tests {
     use alloc::vec::Vec;
     use lzhuf::decoder::LzhufDecoder;
     use lzhuf::encoder::LzhufEncoder;
+    use rand::distributions::Standard;
     use rand::{Rng, SeedableRng};
     use rand_xorshift::XorShiftRng;
-    use rand::distributions::Standard;
     use traits::decoder::DecodeExt;
     use traits::encoder::EncodeExt;
 
@@ -88,7 +88,8 @@ mod tests {
     #[test]
     fn test_long() {
         check(
-            &(b"a".into_iter()
+            &(b"a"
+                .into_iter()
                 .cycle()
                 .take(260)
                 .cloned()
@@ -124,7 +125,8 @@ mod tests {
         ]);
 
         check(
-            &(rng.sample_iter(&Standard)
+            &(rng
+                .sample_iter(&Standard)
                 .take(0xF_FFFF)
                 .collect::<Vec<_>>()),
         );

@@ -47,15 +47,18 @@ impl GZipDecoder {
     ) -> Result<u32, CompressionError> {
         (0..4)
             .map(|i| {
-                Ok(try!(
-                    iter.read_bits::<u32>(8)
-                        .map_err(|_| CompressionError::UnexpectedEof)
-                ).data() << (i << 3))
+                Ok(iter
+                    .read_bits::<u32>(8)
+                    .map_err(|_| CompressionError::UnexpectedEof)?
+                    .data()
+                    << (i << 3))
             })
             .fold(
                 Ok(0_u32),
                 |s: Result<_, CompressionError>,
-                 x: Result<_, CompressionError>| Ok(try!(x) | try!(s)),
+                 x: Result<_, CompressionError>| {
+                    Ok(x? | s?)
+                },
             )
     }
 }
@@ -72,10 +75,9 @@ where
             if !self.header_checked {
                 if self.header.len() < self.header_needlen {
                     self.header.push(
-                        try!(
-                            iter.read_bits::<u8>(8)
-                                .map_err(|_| CompressionError::UnexpectedEof)
-                        ).data(),
+                        iter.read_bits::<u8>(8)
+                            .map_err(|_| CompressionError::UnexpectedEof)?
+                            .data(),
                     );
                 } else {
                     // ID1 1byte
@@ -194,11 +196,11 @@ where
                     Ok(None) => {
                         iter.skip_to_next_byte();
 
-                        let c = try!(Self::read_u32(iter));
+                        let c = Self::read_u32(iter)?;
                         if u64::from(c) != self.crc32.finish() {
                             return Err(CompressionError::DataError);
                         }
-                        let i_size = try!(Self::read_u32(iter));
+                        let i_size = Self::read_u32(iter)?;
                         if i_size != self.i_size {
                             return Err(CompressionError::DataError);
                         }

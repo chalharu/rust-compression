@@ -58,7 +58,8 @@ fn gen_code_lm<F: Fn(usize, usize) -> usize>(
     weight_add_fn: F,
 ) -> Vec<u8> {
     let len = freq.len();
-    let mut freqmap = freq.iter()
+    let mut freqmap = freq
+        .iter()
         .enumerate()
         .map(|(i, &f)| (i, f))
         .collect::<Vec<_>>();
@@ -90,12 +91,8 @@ fn gen_code_lm<F: Fn(usize, usize) -> usize>(
         }
     }
 
-    let mut val = (0..lim)
-        .map(|i| vec![0; max_elem[i]])
-        .collect::<Vec<_>>();
-    let mut ty = (0..lim)
-        .map(|i| vec![0; max_elem[i]])
-        .collect::<Vec<_>>();
+    let mut val = (0..lim).map(|i| vec![0; max_elem[i]]).collect::<Vec<_>>();
+    let mut ty = (0..lim).map(|i| vec![0; max_elem[i]]).collect::<Vec<_>>();
     let mut c = vec![lim; len];
 
     for (t, &s) in sfreq.iter().enumerate().take(max_elem[lim - 1]) {
@@ -141,14 +138,13 @@ fn gen_code_lm<F: Fn(usize, usize) -> usize>(
         }
     }
 
-    let mut r = c.iter()
+    let mut r = c
+        .iter()
         .zip(map)
         .map(|(&x, i)| (x as u8, i))
         .collect::<Vec<_>>();
     r.sort_unstable_by_key(|v| v.1);
-    r.into_iter()
-        .map(move |v| v.0)
-        .collect::<Vec<_>>()
+    r.into_iter().map(move |v| v.0).collect::<Vec<_>>()
 }
 
 fn gen_code<F: Fn(usize, usize) -> usize>(
@@ -204,7 +200,8 @@ pub fn make_tab_with_fn<F: Fn(usize, usize) -> usize>(
     if freq.is_empty() {
         Vec::new()
     } else {
-        let (s, l): (Vec<_>, Vec<_>) = freq.iter()
+        let (s, l): (Vec<_>, Vec<_>) = freq
+            .iter()
             .enumerate()
             .filter_map(|(i, &t)| if t != 0 { Some((i, t)) } else { None })
             .unzip();
@@ -278,7 +275,8 @@ mod tests {
             tab.iter()
                 .zip(freq.clone())
                 .map(|(x, y)| *x as usize * y)
-                .sum::<usize>() < freq.iter().sum::<usize>() * 6
+                .sum::<usize>()
+                < freq.iter().sum::<usize>() * 6
         );
 
         assert!(*tab.iter().max().unwrap() <= 8);

@@ -16,9 +16,9 @@ mod tests {
     use alloc::vec::Vec;
     use gzip::decoder::GZipDecoder;
     use gzip::encoder::GZipEncoder;
+    use rand::distributions::Standard;
     use rand::{Rng, SeedableRng};
     use rand_xorshift::XorShiftRng;
-    use rand::distributions::Standard;
     use traits::decoder::DecodeExt;
     use traits::encoder::EncodeExt;
 
@@ -58,13 +58,7 @@ mod tests {
 
     #[test]
     fn test_long() {
-        check(
-            &(b"a".iter()
-                .cycle()
-                .take(260)
-                .cloned()
-                .collect::<Vec<u8>>()),
-        );
+        check(&(b"a".iter().cycle().take(260).cloned().collect::<Vec<u8>>()));
     }
 
     #[test]
@@ -95,7 +89,8 @@ mod tests {
         ]);
 
         check(
-            &(rng.sample_iter(&Standard)
+            &(rng
+                .sample_iter(&Standard)
                 .take(0xF_FFFF)
                 .collect::<Vec<_>>()),
         );

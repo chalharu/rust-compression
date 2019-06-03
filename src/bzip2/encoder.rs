@@ -7,18 +7,18 @@
 
 use action::Action;
 #[cfg(not(feature = "std"))]
+use alloc::collections::vec_deque::VecDeque;
+#[cfg(not(feature = "std"))]
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-#[cfg(not(feature = "std"))]
-use alloc::collections::vec_deque::VecDeque;
-use bitio::direction::Direction;
 use bitio::direction::left::Left;
+use bitio::direction::Direction;
 use bitio::small_bit_vec::SmallBitVec;
 use bitio::writer::BitWriter;
 use bitset::BitArray;
 use bzip2::mtf::MtfPosition;
-use bzip2::{HEADER_0, HEADER_h, BZ_G_SIZE, HEADER_B, HEADER_Z};
+use bzip2::{HEADER_h, BZ_G_SIZE, HEADER_0, HEADER_B, HEADER_Z};
 use core::cmp;
 use core::fmt;
 use core::hash::{BuildHasher, Hasher};
@@ -265,7 +265,7 @@ impl EncoderInner {
             --*/
             self.write(queue, SmallBitVec::new(0, 1));
 
-            try!(self.write_blockdata(queue));
+            self.write_blockdata(queue)?;
             self.prepare_new_block();
         }
         /*-- If this is the last block, add the stream trailer. --*/
@@ -278,10 +278,7 @@ impl EncoderInner {
             self.write_u8(queue, 0x90);
             let comcrc = self.combined_crc;
             self.write_u32(queue, comcrc);
-            debug!(
-                "    final combined CRC = 0x{:08X}   ",
-                self.combined_crc
-            );
+            debug!("    final combined CRC = 0x{:08X}   ", self.combined_crc);
         }
         Ok(())
     }
@@ -385,7 +382,9 @@ impl EncoderInner {
                     a_freq += mtf_freq[ge as usize];
                 }
 
-                if ge > prev.1 && n_part != group_num && n_part != 1
+                if ge > prev.1
+                    && n_part != group_num
+                    && n_part != 1
                     && (((group_num - n_part) & 1) == 1)
                 {
                     a_freq -= mtf_freq[ge as usize];
@@ -443,7 +442,8 @@ impl EncoderInner {
                    Find the coding table which is best for this group,
                    and record its identity in the selector table.
                 --*/
-                let (bt, bc) = len.iter()
+                let (bt, bc) = len
+                    .iter()
                     .rev()
                     .map(|li| {
                         self.mtf_buffer[gs..ge]
@@ -465,8 +465,8 @@ impl EncoderInner {
                 n_selectors += 1;
 
                 /*--
-                   Increment the symbol frequencies for the selected table.
-                 --*/
+                  Increment the symbol frequencies for the selected table.
+                --*/
                 for &i in &self.mtf_buffer[gs..ge] {
                     rfreq[bt][i as usize] += 1;
                 }
@@ -493,7 +493,7 @@ impl EncoderInner {
               Recompute the tables based on the accumulated frequencies.
             --*/
             /* maxLen was changed from 20 to 17 in bzip2-1.0.3.  See
-                   comment in huffman.c for details. */
+            comment in huffman.c for details. */
             len = rfreq
                 .iter()
                 .rev()
@@ -510,7 +510,8 @@ impl EncoderInner {
             .collect::<Vec<_>>();
 
         /*--- Assign actual codes for the tables. --*/
-        let code = len.iter()
+        let code = len
+            .iter()
             .rev()
             .map(|j| HuffmanEncoder::<Left, u32>::new(j))
             .collect::<Vec<_>>();
@@ -518,10 +519,8 @@ impl EncoderInner {
         let mut debug_str = String::new();
         /*--- Transmit the mapping table. ---*/
         {
-            let in_use16 = self.in_use
-                .u16_iter()
-                .map(|x| x != 0)
-                .collect::<BitArray>();
+            let in_use16 =
+                self.in_use.u16_iter().map(|x| x != 0).collect::<BitArray>();
 
             let n_bits = self.num_z;
             self.write_u16(
@@ -531,11 +530,13 @@ impl EncoderInner {
                     .fold(0, |x, y| (x << 1) + if y { 1 } else { 0 }),
             );
 
-            for i in in_use16
-                .iter()
-                .enumerate()
-                .filter_map(|(i, x)| if x { Some(i << 4) } else { None })
-            {
+            for i in in_use16.iter().enumerate().filter_map(|(i, x)| {
+                if x {
+                    Some(i << 4)
+                } else {
+                    None
+                }
+            }) {
                 for j in (0..16).map(|x| x + i) {
                     let bv = SmallBitVec::new(
                         if self.in_use.get(j) { 1 } else { 0 },
@@ -562,10 +563,7 @@ impl EncoderInner {
         self.write(queue, SmallBitVec::new(n_selectors as u32, 15));
 
         for s in selector_mtf {
-            self.write(
-                queue,
-                SmallBitVec::new((1 << (s + 1)) - 2, s + 1),
-            );
+            self.write(queue, SmallBitVec::new((1 << (s + 1)) - 2, s + 1));
         }
 
         if log_enabled!(Level::Debug) {
@@ -613,11 +611,9 @@ impl EncoderInner {
                     let b = self.mtf_buffer[i];
                     self.write(
                         queue,
-                        try!(
-                            encoder
-                                .enc(b)
-                                .map_err(|_| CompressionError::Unexpected)
-                        ),
+                        encoder
+                            .enc(b)
+                            .map_err(|_| CompressionError::Unexpected)?,
                     );
                 }
                 gs = ge;
@@ -636,7 +632,8 @@ impl EncoderInner {
     }
 
     fn create_huffman(freq: &[usize], lim: usize) -> Vec<u8> {
-        let weight = freq.iter()
+        let weight = freq
+            .iter()
             .map(|&x| cmp::max(1, x) << 8)
             .collect::<Vec<_>>();
 
