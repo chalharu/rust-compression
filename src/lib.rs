@@ -119,6 +119,13 @@ pub mod prelude {
             pub use zlib::encoder::ZlibEncoder;
         }
     }
+    cfg_if! {
+        if #[cfg(feature = "lzss")] {
+            pub use lzss::decoder::LzssDecoder;
+            pub use lzss::encoder::LzssEncoder;
+            pub use lzss::LzssCode;
+        }
+    }
     pub use error::CompressionError;
     pub use traits::decoder::{DecodeExt, DecodeIterator, Decoder};
     pub use traits::encoder::{EncodeExt, EncodeIterator, Encoder};

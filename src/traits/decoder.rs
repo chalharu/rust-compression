@@ -11,58 +11,56 @@ use core::borrow::BorrowMut;
 use core::marker::PhantomData;
 use error::CompressionError;
 
-pub trait DecodeExt<I, R>
+pub trait DecodeExt<I>
 where
-    I: Iterator<Item = u8>,
+    I: Iterator,
 {
-    fn decode<E: Decoder<R>>(self, decoder: &mut E) -> DecodeIterator<R, E, R>
+    fn decode<D: Decoder<Input = I::Item>>(
+        self,
+        decoder: &mut D,
+    ) -> DecodeIterator<I, D, I>
     where
-        CompressionError: From<E::Error>;
+        CompressionError: From<D::Error>;
 }
 
-impl<I, D> DecodeExt<I::IntoIter, BitReader<D, I::IntoIter>> for I
+impl<I> DecodeExt<I::IntoIter> for I
 where
-    D: Direction,
-    I: IntoIterator<Item = u8>,
+    I: IntoIterator,
 {
-    fn decode<E: Decoder<BitReader<D, I::IntoIter>>>(
+    fn decode<D: Decoder<Input = I::Item>>(
         self,
-        decoder: &mut E,
-    ) -> DecodeBitIterator<D, I::IntoIter, E>
+        decoder: &mut D,
+    ) -> DecodeIterator<I::IntoIter, D, I::IntoIter>
     where
-        D: Direction,
-        E: Decoder<BitReader<D, I::IntoIter>>,
-        CompressionError: From<E::Error>,
+        CompressionError: From<D::Error>,
     {
-        DecodeIterator::<
-            BitReader<D, I::IntoIter>,
-            E,
-            BitReader<D, I::IntoIter>,
-        >::new(BitReader::<D, _>::new(self.into_iter()), decoder)
+        DecodeIterator::<I::IntoIter, D, I::IntoIter>::new(
+            self.into_iter(),
+            decoder,
+        )
     }
 }
 
-type DecodeBitIterator<'a, D, I, E> =
-    DecodeIterator<'a, BitReader<D, I>, E, BitReader<D, I>>;
-
-pub struct DecodeIterator<'a, R, E, B>
+pub struct DecodeIterator<'a, I, D, B>
 where
-    E: Decoder<R> + 'a,
-    B: BorrowMut<R>,
-    CompressionError: From<E::Error>,
+    I: Iterator<Item = D::Input>,
+    D: Decoder + 'a,
+    B: BorrowMut<I>,
+    CompressionError: From<D::Error>,
 {
-    decoder: &'a mut E,
+    decoder: &'a mut D,
     inner: B,
-    phantom: PhantomData<fn() -> R>,
+    phantom: PhantomData<fn() -> I>,
 }
 
-impl<'a, R, E, B> DecodeIterator<'a, R, E, B>
+impl<'a, I, D, B> DecodeIterator<'a, I, D, B>
 where
-    E: Decoder<R>,
-    B: BorrowMut<R>,
-    CompressionError: From<E::Error>,
+    I: Iterator<Item = D::Input>,
+    D: Decoder,
+    B: BorrowMut<I>,
+    CompressionError: From<D::Error>,
 {
-    fn new(inner: B, decoder: &'a mut E) -> Self {
+    pub(crate) fn new(inner: B, decoder: &'a mut D) -> Self {
         Self {
             decoder,
             inner,
@@ -71,45 +69,151 @@ where
     }
 }
 
-impl<'a, R, E, B> Iterator for DecodeIterator<'a, R, E, B>
+impl<'a, I, D, B> Iterator for DecodeIterator<'a, I, D, B>
 where
-    E: Decoder<R>,
-    B: BorrowMut<R>,
-    CompressionError: From<E::Error>,
+    I: Iterator<Item = D::Input>,
+    D: Decoder,
+    B: BorrowMut<I>,
+    CompressionError: From<D::Error>,
 {
-    type Item = Result<E::Output, E::Error>;
+    type Item = Result<D::Output, D::Error>;
 
-    fn next(&mut self) -> Option<Result<E::Output, E::Error>> {
-        match self.decoder.next(&mut self.inner.borrow_mut()) {
-            Ok(Some(s)) => Some(Ok(s)),
-            Ok(None) => None,
-            Err(s) => Some(Err(s)),
-        }
+    fn next(&mut self) -> Option<Result<D::Output, D::Error>> {
+        self.decoder.next(self.inner.borrow_mut())
     }
 }
 
-pub trait Decoder<R>
+pub trait Decoder
 where
     CompressionError: From<Self::Error>,
 {
     type Error;
+    type Input;
     type Output;
-    fn next(
+    fn next<I: Iterator<Item = Self::Input>>(
         &mut self,
-        iter: &mut R,
-    ) -> Result<Option<Self::Output>, Self::Error>;
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>>;
+}
 
-    fn iter<'a>(
-        &'a mut self,
-        reader: &'a mut R,
-    ) -> DecodeIterator<R, Self, &'a mut R>
-    where
-        Self: Sized,
-    {
-        DecodeIterator {
-            decoder: self,
-            inner: reader,
-            phantom: PhantomData,
+cfg_if! {
+    if #[cfg(any(feature = "bzip2", feature="deflate", feature="lzhuf"))] {
+        pub struct BitDecoder<T, R, B>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            R: BorrowMut<BitReader<T::Direction>>,
+            B: BorrowMut<T>,
+        {
+            reader: R,
+            service: B,
+            phantom: PhantomData<fn() -> T>,
         }
+
+        #[cfg(any(feature = "bzip2", feature="deflate"))]
+        impl<T> BitDecoder<T, BitReader<T::Direction>, T>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            T: Default,
+            T::Direction: BorrowMut<T::Direction>,
+            BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
+        {
+            pub fn new() -> Self {
+                Self {
+                    reader: BitReader::new(),
+                    service: T::default(),
+                    phantom: PhantomData,
+                }
+            }
+        }
+
+        #[cfg(any(feature="zlib", feature="deflate", feature="lzhuf"))]
+        impl<T, R, B> BitDecoder<T, R, B>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            R: BorrowMut<BitReader<T::Direction>>,
+            B: BorrowMut<T>,
+        {
+            pub fn with_service(service: B, reader: R) -> Self {
+                Self {
+                    reader,
+                    service,
+                    phantom: PhantomData,
+                }
+            }
+        }
+        impl<T> Default for BitDecoder<T, BitReader<T::Direction>, T>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            T: Default,
+            T::Direction: BorrowMut<T::Direction>,
+            BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
+        {
+            fn default() -> Self {
+                Self {
+                    reader: BitReader::new(),
+                    service: T::default(),
+                    phantom: PhantomData,
+                }
+            }
+        }
+
+        impl<T> From<T> for BitDecoder<T, BitReader<T::Direction>, T>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            T::Direction: BorrowMut<T::Direction>,
+            BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
+        {
+            fn from(iter: T) -> Self {
+                Self {
+                    reader: BitReader::<T::Direction>::new(),
+                    service: iter,
+                    phantom: PhantomData,
+                }
+            }
+        }
+
+        impl<T, R, B> Decoder for BitDecoder<T, R, B>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            R: BorrowMut<BitReader<T::Direction>>,
+            B: BorrowMut<T>,
+        {
+            type Error = T::Error;
+            type Input = u8;
+            type Output = T::Output;
+            fn next<I: Iterator<Item = Self::Input>>(
+                &mut self,
+                iter: &mut I,
+            ) -> Option<Result<Self::Output, Self::Error>> {
+                self.service
+                    .borrow_mut()
+                    .next(self.reader.borrow_mut(), iter)
+                    .transpose()
+            }
+        }
+
+        pub type BitDecoderImpl<T> =
+            BitDecoder<T, BitReader<<T as BitDecodeService>::Direction>, T>;
     }
+}
+
+pub trait BitDecodeService
+where
+    Self::Direction: Direction,
+    CompressionError: From<Self::Error>,
+{
+    type Direction;
+    type Error;
+    type Output;
+    fn next<I: Iterator<Item = u8>>(
+        &mut self,
+        reader: &mut BitReader<Self::Direction>,
+        iter: &mut I,
+    ) -> Result<Option<Self::Output>, Self::Error>;
 }

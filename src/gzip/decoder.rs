@@ -8,15 +8,15 @@
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::right::Right;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use core::hash::{BuildHasher, Hasher};
 use crc32::{BuiltinDigest, IEEE_REVERSE};
-use deflate::decoder::Deflater;
+use deflate::decoder::DeflaterBase;
 use error::CompressionError;
-use traits::decoder::Decoder;
+use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 
-pub struct GZipDecoder {
-    deflater: Deflater,
+pub struct GZipDecoderBase {
+    deflater: DeflaterBase,
     crc32: BuiltinDigest,
     header: Vec<u8>,
     header_needlen: usize,
@@ -24,16 +24,16 @@ pub struct GZipDecoder {
     i_size: u32,
 }
 
-impl Default for GZipDecoder {
+impl Default for GZipDecoderBase {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GZipDecoder {
+impl GZipDecoderBase {
     pub fn new() -> Self {
         Self {
-            deflater: Deflater::new(),
+            deflater: DeflaterBase::new(),
             crc32: IEEE_REVERSE.build_hasher(),
             header: Vec::new(),
             header_needlen: 10,
@@ -42,13 +42,14 @@ impl GZipDecoder {
         }
     }
 
-    fn read_u32<R: BitRead<Right>>(
-        iter: &mut R,
+    fn read_u32<R: BitRead, I: Iterator<Item = u8>>(
+        reader: &mut R,
+        iter: &mut I,
     ) -> Result<u32, CompressionError> {
         (0..4)
             .map(|i| {
-                Ok(iter
-                    .read_bits::<u32>(8)
+                Ok(reader
+                    .read_bits::<u32, _>(8, iter)
                     .map_err(|_| CompressionError::UnexpectedEof)?
                     .data()
                     << (i << 3))
@@ -63,19 +64,22 @@ impl GZipDecoder {
     }
 }
 
-impl<R> Decoder<R> for GZipDecoder
-where
-    R: BitRead<Right>,
-{
+impl BitDecodeService for GZipDecoderBase {
+    type Direction = Right;
     type Error = CompressionError;
     type Output = u8;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+    fn next<I: Iterator<Item = u8>>(
+        &mut self,
+        reader: &mut BitReader<Self::Direction>,
+        iter: &mut I,
+    ) -> Result<Option<u8>, Self::Error> {
         loop {
             if !self.header_checked {
                 if self.header.len() < self.header_needlen {
                     self.header.push(
-                        iter.read_bits::<u8>(8)
+                        reader
+                            .read_bits::<u8, _>(8, iter)
                             .map_err(|_| CompressionError::UnexpectedEof)?
                             .data(),
                     );
@@ -187,20 +191,20 @@ where
                 }
             } else {
                 // body
-                match self.deflater.next(iter) {
+                match self.deflater.next(reader, iter) {
                     Ok(Some(s)) => {
                         self.crc32.write_u8(s);
                         self.i_size += 1;
                         return Ok(Some(s));
                     }
                     Ok(None) => {
-                        iter.skip_to_next_byte();
+                        reader.skip_to_next_byte();
 
-                        let c = Self::read_u32(iter)?;
+                        let c = Self::read_u32(reader, iter)?;
                         if u64::from(c) != self.crc32.finish() {
                             return Err(CompressionError::DataError);
                         }
-                        let i_size = Self::read_u32(iter)?;
+                        let i_size = Self::read_u32(reader, iter)?;
                         if i_size != self.i_size {
                             return Err(CompressionError::DataError);
                         }
@@ -210,5 +214,38 @@ where
                 }
             }
         }
+    }
+}
+
+pub struct GZipDecoder {
+    inner: BitDecoderImpl<GZipDecoderBase>,
+}
+
+impl GZipDecoder {
+    pub fn new() -> Self {
+        Self {
+            inner: BitDecoderImpl::<GZipDecoderBase>::new(),
+        }
+    }
+}
+
+impl Default for GZipDecoder {
+    fn default() -> Self {
+        Self {
+            inner: BitDecoderImpl::<GZipDecoderBase>::new(),
+        }
+    }
+}
+
+impl Decoder for GZipDecoder {
+    type Input = u8;
+    type Output = u8;
+    type Error = CompressionError;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
     }
 }

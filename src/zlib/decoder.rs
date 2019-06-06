@@ -9,15 +9,15 @@ use adler32::Adler32;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::right::Right;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use core::hash::Hasher;
-use deflate::decoder::Deflater;
+use deflate::decoder::DeflaterBase;
 use error::CompressionError;
-use traits::decoder::Decoder;
+use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 
 #[derive(Default)]
-pub struct ZlibDecoder {
-    deflater: Deflater,
+pub struct ZlibDecoderBase {
+    deflater: DeflaterBase,
     adler32: Adler32,
     dict_hash: Option<u32>,
     header: Vec<u8>,
@@ -25,23 +25,12 @@ pub struct ZlibDecoder {
     header_checked: bool,
 }
 
-impl ZlibDecoder {
-    pub fn new() -> Self {
-        Self {
-            deflater: Deflater::new(),
-            adler32: Adler32::new(),
-            dict_hash: None,
-            header: Vec::new(),
-            header_needlen: 0,
-            header_checked: false,
-        }
-    }
-
-    pub fn with_dict(dict: &[u8]) -> Self {
+impl ZlibDecoderBase {
+    fn with_dict(dict: &[u8]) -> Self {
         let mut dict_idc = Adler32::new();
         dict_idc.write(dict);
         Self {
-            deflater: Deflater::with_dict(dict),
+            deflater: DeflaterBase::with_dict(dict),
             adler32: Adler32::new(),
             dict_hash: Some(dict_idc.finish() as u32),
             header: Vec::new(),
@@ -51,18 +40,20 @@ impl ZlibDecoder {
     }
 }
 
-impl<R> Decoder<R> for ZlibDecoder
-where
-    R: BitRead<Right>,
-{
+impl BitDecodeService for ZlibDecoderBase {
+    type Direction = Right;
     type Error = CompressionError;
     type Output = u8;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+    fn next<I: Iterator<Item = u8>>(
+        &mut self,
+        reader: &mut BitReader<Self::Direction>,
+        iter: &mut I,
+    ) -> Result<Option<u8>, Self::Error> {
         loop {
             if !self.header_checked {
-                let s = iter
-                    .read_bits::<u8>(8)
+                let s = reader
+                    .read_bits::<u8, _>(8, iter)
                     .map_err(|_| CompressionError::UnexpectedEof)?
                     .data();
                 if self.header.len() < 2 {
@@ -109,25 +100,27 @@ where
                 }
             } else {
                 // body
-                match self.deflater.next(iter) {
+                match self.deflater.next(reader, iter) {
                     Ok(Some(s)) => {
                         self.adler32.write_u8(s);
                         return Ok(Some(s));
                     }
                     Ok(None) => {
-                        iter.skip_to_next_byte();
-                        let c = (0..4).map(|_| iter.read_bits::<u32>(8)).fold(
-                            Ok(0_u32),
-                            |s: Result<_, CompressionError>, x| {
-                                Ok(x.map_err(|_| {
-                                    CompressionError::UnexpectedEof
-                                })?
-                                .data()
-                                    | (s.map_err(|_| {
+                        reader.skip_to_next_byte();
+                        let c = (0..4)
+                            .map(|_| reader.read_bits::<u32, _>(8, iter))
+                            .fold(
+                                Ok(0_u32),
+                                |s: Result<_, CompressionError>, x| {
+                                    Ok(x.map_err(|_| {
                                         CompressionError::UnexpectedEof
-                                    })? << 8))
-                            },
-                        )?;
+                                    })?
+                                    .data()
+                                        | (s.map_err(|_| {
+                                            CompressionError::UnexpectedEof
+                                        })? << 8))
+                                },
+                            )?;
                         if u64::from(c) != self.adler32.finish() {
                             return Err(CompressionError::DataError);
                         } else {
@@ -138,5 +131,47 @@ where
                 }
             }
         }
+    }
+}
+
+pub struct ZlibDecoder {
+    inner: BitDecoderImpl<ZlibDecoderBase>,
+}
+
+impl ZlibDecoder {
+    pub fn new() -> Self {
+        Self {
+            inner: BitDecoderImpl::<ZlibDecoderBase>::new(),
+        }
+    }
+
+    pub fn with_dict(dict: &[u8]) -> Self {
+        Self {
+            inner: BitDecoderImpl::<ZlibDecoderBase>::with_service(
+                ZlibDecoderBase::with_dict(dict),
+                BitReader::new(),
+            ),
+        }
+    }
+}
+
+impl Default for ZlibDecoder {
+    fn default() -> Self {
+        Self {
+            inner: BitDecoderImpl::<ZlibDecoderBase>::new(),
+        }
+    }
+}
+
+impl Decoder for ZlibDecoder {
+    type Input = u8;
+    type Output = u8;
+    type Error = CompressionError;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
     }
 }

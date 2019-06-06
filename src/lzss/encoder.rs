@@ -9,12 +9,56 @@ use action::Action;
 #[cfg(not(feature = "std"))]
 use alloc::collections::vec_deque::VecDeque;
 use core::cmp::{self, Ordering};
+use error::CompressionError;
 use lzss::compare_match_info;
 use lzss::slidedict::SlideDict;
 use lzss::LzssCode;
 #[cfg(feature = "std")]
 use std::collections::vec_deque::VecDeque;
+use traits::encoder::Encoder;
 
+/// # Examples
+///
+/// ```rust
+/// extern crate compression;
+/// use compression::prelude::*;
+/// use std::cmp::Ordering;
+///
+/// fn main() {
+///     pub fn comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
+///         match (lhs, rhs) {
+///             (
+///                 LzssCode::Reference {
+///                     len: llen,
+///                     pos: lpos,
+///                 },
+///                 LzssCode::Reference {
+///                     len: rlen,
+///                     pos: rpos,
+///                 },
+///             ) => ((llen << 3) + rpos).cmp(&((rlen << 3) + lpos)).reverse(),
+///             (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
+///             (_, LzssCode::Symbol(_)) => Ordering::Greater,
+///             (LzssCode::Symbol(_), _) => Ordering::Less,
+///         }
+///     }
+///     # #[cfg(feature = "lzss")]
+///     let compressed = b"aabbaabbaabbaabb\n"
+///         .into_iter()
+///         .cloned()
+///         .encode(&mut LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3), Action::Finish)
+///         .collect::<Result<Vec<_>, _>>()
+///         .unwrap();
+///
+///     # #[cfg(feature = "lzss")]
+///     let decompressed = compressed
+///         .iter()
+///         .cloned()
+///         .decode(&mut LzssDecoder::new(0x1_0000))
+///         .collect::<Result<Vec<_>, _>>()
+///         .unwrap();
+/// }
+/// ```
 pub struct LzssEncoder<F>
 where
     F: Fn(LzssCode, LzssCode) -> Ordering + Copy,
@@ -57,7 +101,6 @@ where
         }
     }
 
-    #[cfg(any(feature = "deflate", test))]
     pub fn with_dict(
         comp: F,
         size_of_window: usize,
@@ -140,30 +183,6 @@ where
         }
     }
 
-    pub fn next<I: Iterator<Item = u8>>(
-        &mut self,
-        iter: &mut I,
-        action: Action,
-    ) -> Option<LzssCode> {
-        while self.lzss_queue.is_empty() {
-            match iter.next() {
-                Some(s) => self.next_in(s),
-                None => {
-                    if self.finished {
-                        self.finished = false;
-                        return None;
-                    } else {
-                        if Action::Flush == action || Action::Finish == action {
-                            self.flush()
-                        };
-                        self.finished = true;
-                    }
-                }
-            }
-        }
-        self.lzss_queue.pop_front()
-    }
-
     fn next_in(&mut self, data: u8) {
         if self.max_match + self.lazy_level > self.offset {
             self.slide.append(&[data]);
@@ -181,6 +200,39 @@ where
     }
 }
 
+impl<F> Encoder for LzssEncoder<F>
+where
+    F: Fn(LzssCode, LzssCode) -> Ordering + Copy,
+{
+    type Error = CompressionError;
+    type In = u8;
+    type Out = LzssCode;
+
+    fn next<I: Iterator<Item = u8>>(
+        &mut self,
+        iter: &mut I,
+        action: Action,
+    ) -> Option<Result<LzssCode, CompressionError>> {
+        while self.lzss_queue.is_empty() {
+            match iter.next() {
+                Some(s) => self.next_in(s),
+                None => {
+                    if self.finished {
+                        self.finished = false;
+                        return None;
+                    } else {
+                        if Action::Flush == action || Action::Finish == action {
+                            self.flush()
+                        };
+                        self.finished = true;
+                    }
+                }
+            }
+        }
+        self.lzss_queue.pop_front().map(Ok)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -195,6 +247,7 @@ mod tests {
         let mut iter = b"a".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(ret, vec![LzssCode::Symbol(b'a')]);
@@ -206,11 +259,13 @@ mod tests {
         let mut iter = b"a".iter().cloned();
         let mut ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Run))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
         let mut iter = b"a".iter().cloned();
         ret.append(
             &mut (0..)
                 .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+                .map(Result::unwrap)
                 .collect::<Vec<_>>(),
         );
 
@@ -223,6 +278,7 @@ mod tests {
         let mut iter = b"aaa".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -242,6 +298,7 @@ mod tests {
         let mut iter = b"aaaa".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -259,6 +316,7 @@ mod tests {
         let mut iter = b"aaaaaaaaaaa".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -283,6 +341,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -306,6 +365,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -331,6 +391,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -349,6 +410,7 @@ mod tests {
         let mut iter = b"aaabbbaaabbb".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -371,6 +433,7 @@ mod tests {
         let mut iter = b"aabbaabbaaabbbaaabbbaabbaabb".iter().cloned();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -400,6 +463,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         let mut result = (0..256)
@@ -421,6 +485,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         let mut result = (0..256)
@@ -449,6 +514,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(ret, vec![LzssCode::Reference { len: 256, pos: 255 }; 2]);
@@ -477,6 +543,7 @@ mod tests {
             .into_iter();
         let ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(

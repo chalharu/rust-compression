@@ -151,10 +151,13 @@ impl LzhufEncoder {
     ) -> Option<Result<SmallBitVec<u16>, CompressionError>> {
         while self.queue.is_empty() {
             match self.lzss.next(iter, action) {
-                Some(ref s) => {
+                Some(Ok(ref s)) => {
                     if let Err(e) = self.inner.next(s, &mut self.queue) {
                         return Some(Err(e));
                     }
+                }
+                Some(Err(e)) => {
+                    return Some(Err(e));
                 }
                 None => {
                     if self.finished {
@@ -189,6 +192,8 @@ impl LzhufEncoder {
 
 impl Encoder for LzhufEncoder {
     type Error = CompressionError;
+    type In = u8;
+    type Out = u8;
     fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,
@@ -570,7 +575,7 @@ mod tests {
     fn test_arr() {
         let mut encoder = LzhufEncoder::new(&LzhufMethod::Lh7);
         let a = b"aaaaaaaaaaa"
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -612,7 +617,7 @@ mod tests {
     fn test_empty() {
         let mut encoder = LzhufEncoder::new(&LzhufMethod::Lh7);
         let a = b""
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -624,7 +629,7 @@ mod tests {
     fn test_unit() {
         let mut encoder = LzhufEncoder::new(&LzhufMethod::Lh7);
         let a = b"a"
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -654,7 +659,7 @@ mod tests {
     fn test_midarr() {
         let mut encoder = LzhufEncoder::new(&LzhufMethod::Lh7);
         let a = b"a"
-            .into_iter()
+            .iter()
             .cycle()
             .take(260)
             .map(|&x| x as u8)

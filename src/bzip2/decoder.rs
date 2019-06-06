@@ -10,7 +10,7 @@ use alloc::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::left::Left;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use bitset::BitArray;
 use bzip2::error::BZip2Error;
 use bzip2::mtf::MtfPositionDecoder;
@@ -18,7 +18,7 @@ use bzip2::{HEADER_h, BZ_G_SIZE, HEADER_0, HEADER_B, HEADER_Z};
 use core::hash::{BuildHasher, Hasher};
 use crc32::{BuiltinDigest, IEEE_NORMAL};
 use huffman::decoder::HuffmanDecoder;
-use traits::decoder::Decoder;
+use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 
 const BZ2_R_NUMS: [usize; 512] = [
     619, 720, 127, 481, 931, 816, 813, 233, 566, 247, 985, 724, 205, 454, 863,
@@ -86,7 +86,7 @@ impl BlockRandomise {
     }
 }
 
-pub struct BZip2Decoder {
+pub struct BZip2DecoderBase {
     block_no: usize,
     block_size_100k: usize,
     combined_crc: u32,
@@ -103,13 +103,13 @@ pub struct BZip2Decoder {
     stream_no: usize,
 }
 
-impl Default for BZip2Decoder {
+impl Default for BZip2DecoderBase {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl BZip2Decoder {
+impl BZip2DecoderBase {
     const RUN_A: u16 = 0;
     const RUN_B: u16 = 1;
 
@@ -132,24 +132,32 @@ impl BZip2Decoder {
         }
     }
 
-    fn read_u8<R: BitRead<Left>>(reader: &mut R) -> Result<u8, String> {
-        reader.read_bits(8).map(|x| x.data())
-    }
-
-    fn read_u32<R: BitRead<Left>>(reader: &mut R) -> Result<u32, String> {
-        reader.read_bits(32).map(|x| x.data())
-    }
-
-    fn check_u8<R: BitRead<Left>>(
+    fn read_u8<R: BitRead, I: Iterator<Item = u8>>(
         reader: &mut R,
+        iter: &mut I,
+    ) -> Result<u8, String> {
+        reader.read_bits(8, iter).map(|x| x.data())
+    }
+
+    fn read_u32<R: BitRead, I: Iterator<Item = u8>>(
+        reader: &mut R,
+        iter: &mut I,
+    ) -> Result<u32, String> {
+        reader.read_bits(32, iter).map(|x| x.data())
+    }
+
+    fn check_u8<R: BitRead, I: Iterator<Item = u8>>(
+        reader: &mut R,
+        iter: &mut I,
         value: u8,
     ) -> Result<bool, String> {
-        Self::read_u8(reader).map(|x| x == value)
+        Self::read_u8(reader, iter).map(|x| x == value)
     }
 
-    fn init_block<R: BitRead<Left>>(
+    fn init_block<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         reader: &mut R,
+        iter: &mut I,
     ) -> Result<bool, BZip2Error> {
         loop {
             if self.block_no == 0 {
@@ -158,11 +166,14 @@ impl BZip2Decoder {
                 } else {
                     BZip2Error::DataErrorMagic
                 };
-                Self::check_u8(reader, HEADER_B).map_err(|_| magic_err)?;
-                Self::check_u8(reader, HEADER_Z).map_err(|_| magic_err)?;
-                Self::check_u8(reader, HEADER_h).map_err(|_| magic_err)?;
+                Self::check_u8(reader, iter, HEADER_B)
+                    .map_err(|_| magic_err)?;
+                Self::check_u8(reader, iter, HEADER_Z)
+                    .map_err(|_| magic_err)?;
+                Self::check_u8(reader, iter, HEADER_h)
+                    .map_err(|_| magic_err)?;
                 self.block_size_100k = {
-                    let b = Self::read_u8(reader)
+                    let b = Self::read_u8(reader, iter)
                         .map_err(|_| BZip2Error::UnexpectedEof)?;
                     if b < 1 + HEADER_0 || b > 9 + HEADER_0 {
                         return Err(magic_err);
@@ -184,37 +195,37 @@ impl BZip2Decoder {
                 self.block_crc_digest = IEEE_NORMAL.build_hasher();
             }
 
-            let block_head_byte =
-                Self::read_u8(reader).map_err(|_| BZip2Error::UnexpectedEof)?;
+            let block_head_byte = Self::read_u8(reader, iter)
+                .map_err(|_| BZip2Error::UnexpectedEof)?;
 
             if block_head_byte == 0x31 {
-                Self::check_u8(reader, 0x41)
+                Self::check_u8(reader, iter, 0x41)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, 0x59)
+                Self::check_u8(reader, iter, 0x59)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, 0x26)
+                Self::check_u8(reader, iter, 0x26)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, 0x53)
+                Self::check_u8(reader, iter, 0x53)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, 0x59)
+                Self::check_u8(reader, iter, 0x59)
                     .map_err(|_| BZip2Error::DataError)?;
                 self.block_no += 1;
                 debug!("    [{}: huff+mtf ", self.block_no);
 
-                self.block_crc = Self::read_u32(reader)
+                self.block_crc = Self::read_u32(reader, iter)
                     .map_err(|_| BZip2Error::UnexpectedEof)?;
                 self.block_randomised = reader
-                    .read_bits::<u8>(1)
+                    .read_bits::<u8, _>(1, iter)
                     .map_err(|_| BZip2Error::UnexpectedEof)?
                     .data()
                     == 1;
 
                 let orig_pos = reader
-                    .read_bits::<u32>(24)
+                    .read_bits::<u32, _>(24, iter)
                     .map_err(|_| BZip2Error::UnexpectedEof)?
                     .data() as usize;
 
@@ -229,7 +240,7 @@ impl BZip2Decoder {
                         in_use16.set(
                             i,
                             reader
-                                .read_bits::<u8>(1)
+                                .read_bits::<u8, _>(1, iter)
                                 .map_err(|_| BZip2Error::UnexpectedEof)?
                                 .data()
                                 == 1,
@@ -242,7 +253,7 @@ impl BZip2Decoder {
                     {
                         for j in 0..16 {
                             if reader
-                                .read_bits::<u8>(1)
+                                .read_bits::<u8, _>(1, iter)
                                 .map_err(|_| BZip2Error::UnexpectedEof)?
                                 .data()
                                 == 1
@@ -262,14 +273,14 @@ impl BZip2Decoder {
 
                 /*--- Now the selectors ---*/
                 let n_groups = reader
-                    .read_bits(3)
+                    .read_bits(3, iter)
                     .map_err(|_| BZip2Error::UnexpectedEof)?
                     .data();
                 if n_groups < 2 || n_groups > 6 {
                     return Err(BZip2Error::DataError);
                 }
                 let n_selectors = reader
-                    .read_bits(15)
+                    .read_bits(15, iter)
                     .map_err(|_| BZip2Error::UnexpectedEof)?
                     .data();
                 if n_selectors < 1 {
@@ -283,7 +294,7 @@ impl BZip2Decoder {
                     for _ in 0..n_selectors {
                         let mut j = 0;
                         while reader
-                            .read_bits::<u8>(1)
+                            .read_bits::<u8, _>(1, iter)
                             .map_err(|_| BZip2Error::UnexpectedEof)?
                             .data()
                             != 0
@@ -302,12 +313,12 @@ impl BZip2Decoder {
                 /*--- Now the coding tables ---*/
                 for t in &mut len {
                     let mut curr = reader
-                        .read_bits::<u8>(5)
+                        .read_bits::<u8, _>(5, iter)
                         .map_err(|_| BZip2Error::UnexpectedEof)?
                         .data();
                     for i in t.iter_mut() {
                         while reader
-                            .read_bits::<u8>(1)
+                            .read_bits::<u8, _>(1, iter)
                             .map_err(|_| BZip2Error::UnexpectedEof)?
                             .data()
                             != 0
@@ -316,7 +327,7 @@ impl BZip2Decoder {
                                 return Err(BZip2Error::DataError);
                             }
                             if reader
-                                .read_bits::<u8>(1)
+                                .read_bits::<u8, _>(1, iter)
                                 .map_err(|_| BZip2Error::UnexpectedEof)?
                                 .data()
                                 == 0
@@ -366,7 +377,7 @@ impl BZip2Decoder {
                         }
                         group_pos -= 1;
                         let next_sym = code[selector[group_no - 1]]
-                            .dec(reader)
+                            .dec(reader, iter)
                             .map_err(|_| BZip2Error::DataError)?
                             .ok_or_else(|| BZip2Error::DataError)?;
 
@@ -467,21 +478,21 @@ impl BZip2Decoder {
 
                 return Ok(true);
             } else if block_head_byte == 0x17 {
-                Self::check_u8(reader, 0x72)
+                Self::check_u8(reader, iter, 0x72)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, 0x45)
+                Self::check_u8(reader, iter, 0x45)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, 0x38)
+                Self::check_u8(reader, iter, 0x38)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, 0x50)
+                Self::check_u8(reader, iter, 0x50)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, 0x90)
+                Self::check_u8(reader, iter, 0x90)
                     .map_err(|_| BZip2Error::DataError)?;
-                let stored_combind_crc = Self::read_u32(reader)
+                let stored_combind_crc = Self::read_u32(reader, iter)
                     .map_err(|_| BZip2Error::UnexpectedEof)?;
                 debug!(
                     "    combined CRCs: stored = 0x{:08x}, computed = 0x{:08x}",
@@ -492,7 +503,7 @@ impl BZip2Decoder {
                 }
                 reader.skip_to_next_byte();
                 let next = reader
-                    .peek_bits::<usize>(8)
+                    .peek_bits::<usize, _>(8, iter)
                     .map_err(|_| BZip2Error::Unexpected)?;
                 if next.len() == 8 {
                     self.block_no = 0;
@@ -525,16 +536,20 @@ impl BZip2Decoder {
     }
 }
 
-impl<R> Decoder<R> for BZip2Decoder
-where
-    R: BitRead<Left>,
-{
+impl BitDecodeService for BZip2DecoderBase {
+    type Direction = Left;
     type Error = BZip2Error;
     type Output = u8;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
+    fn next<I: Iterator<Item = u8>>(
+        &mut self,
+        reader: &mut BitReader<Self::Direction>,
+        iter: &mut I,
+    ) -> Result<Option<u8>, Self::Error> {
         if self.result_count == self.result_wrote_count {
-            if self.n_block_used == self.tt.len() && !self.init_block(iter)? {
+            if self.n_block_used == self.tt.len()
+                && !self.init_block(reader, iter)?
+            {
                 return Ok(None);
             }
 
@@ -556,5 +571,38 @@ where
         }
         self.block_crc_digest.write_u8(self.result_charactor);
         Ok(Some(self.result_charactor))
+    }
+}
+
+pub struct BZip2Decoder {
+    inner: BitDecoderImpl<BZip2DecoderBase>,
+}
+
+impl BZip2Decoder {
+    pub fn new() -> Self {
+        Self {
+            inner: BitDecoderImpl::<BZip2DecoderBase>::new(),
+        }
+    }
+}
+
+impl Default for BZip2Decoder {
+    fn default() -> Self {
+        Self {
+            inner: BitDecoderImpl::<BZip2DecoderBase>::new(),
+        }
+    }
+}
+
+impl Decoder for BZip2Decoder {
+    type Input = u8;
+    type Output = u8;
+    type Error = BZip2Error;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
     }
 }

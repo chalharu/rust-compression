@@ -8,7 +8,7 @@
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitio::direction::right::Right;
-use bitio::reader::BitRead;
+use bitio::reader::{BitRead, BitReader};
 use deflate::{
     fix_offset_table, fix_symbol_table, gen_len_tab, gen_off_tab, CodeTable,
 };
@@ -16,7 +16,9 @@ use error::CompressionError;
 use huffman::decoder::HuffmanDecoder;
 use lzss::decoder::LzssDecoder;
 use lzss::LzssCode;
-use traits::decoder::Decoder;
+use traits::decoder::{
+    BitDecodeService, BitDecoder, BitDecoderImpl, DecodeIterator, Decoder,
+};
 
 enum DeflateHuffmanDecoder {
     HuffmanDecoder(HuffmanDecoder<Right>, bool),
@@ -24,16 +26,17 @@ enum DeflateHuffmanDecoder {
 }
 
 impl DeflateHuffmanDecoder {
-    pub fn dec<R: BitRead<Right>>(
+    pub fn dec<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         reader: &mut R,
+        iter: &mut I,
     ) -> Result<Option<u16>, CompressionError> {
         match *self {
             DeflateHuffmanDecoder::HuffmanDecoder(ref mut rhd, ref mut end) => {
                 if *end {
                     Ok(None)
                 } else {
-                    rhd.dec(reader)
+                    rhd.dec(reader, iter)
                         .map_err(|_| CompressionError::DataError)
                         .and_then(|x| match x {
                             Some(256) => {
@@ -49,7 +52,7 @@ impl DeflateHuffmanDecoder {
                 if *block_size > 0 {
                     *block_size -= 1;
                     reader
-                        .read_bits::<u16>(8)
+                        .read_bits::<u16, _>(8, iter)
                         .map(|x| Some(x.data()))
                         .map_err(|_| CompressionError::UnexpectedEof)
                 } else {
@@ -88,10 +91,11 @@ impl DeflaterInner {
         }
     }
 
-    fn dec_len_tree<R: BitRead<Right>>(
+    fn dec_len_tree<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         hclen: u32,
         reader: &mut R,
+        iter: &mut I,
     ) -> Result<DeflateHuffmanDecoder, CompressionError> {
         let len_index = [
             16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
@@ -99,7 +103,7 @@ impl DeflaterInner {
         let mut len_list = vec![0; 19];
         for &i in len_index.iter().take(hclen as usize) {
             len_list[i] = *reader
-                .read_bits(3)
+                .read_bits(3, iter)
                 .map_err(|_| CompressionError::UnexpectedEof)?
                 .data_ref();
         }
@@ -110,15 +114,16 @@ impl DeflaterInner {
         ))
     }
 
-    fn dec_huff_tree<R: BitRead<Right>>(
+    fn dec_huff_tree<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         len_decoder: &mut DeflateHuffmanDecoder,
         len: usize,
         reader: &mut R,
+        iter: &mut I,
     ) -> Result<DeflateHuffmanDecoder, CompressionError> {
         let mut ll = Vec::new();
         while ll.len() < len {
-            match len_decoder.dec(reader)? {
+            match len_decoder.dec(reader, iter)? {
                 None => return Err(CompressionError::UnexpectedEof),
                 Some(16) => {
                     let last = ll.iter().last().map_or_else(
@@ -126,7 +131,7 @@ impl DeflaterInner {
                         |&l| Ok(l),
                     )?;
                     for _ in 0..(reader
-                        .read_bits::<u8>(2)
+                        .read_bits::<u8, _>(2, iter)
                         .map_err(|_| CompressionError::UnexpectedEof)?
                         .data()
                         + 3)
@@ -136,7 +141,7 @@ impl DeflaterInner {
                 }
                 Some(17) => {
                     for _ in 0..(3 + reader
-                        .read_bits::<u8>(3)
+                        .read_bits::<u8, _>(3, iter)
                         .map_err(|_| CompressionError::UnexpectedEof)?
                         .data())
                     {
@@ -146,7 +151,7 @@ impl DeflaterInner {
                 Some(18) => {
                     for _ in 0..(11
                         + reader
-                            .read_bits::<u8>(7)
+                            .read_bits::<u8, _>(7, iter)
                             .map_err(|_| CompressionError::UnexpectedEof)?
                             .data())
                     {
@@ -163,17 +168,18 @@ impl DeflaterInner {
         ))
     }
 
-    fn init_block<R: BitRead<Right>>(
+    fn init_block<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         reader: &mut R,
+        iter: &mut I,
     ) -> Result<(), CompressionError> {
         self.is_final = reader
-            .read_bits::<u8>(1)
+            .read_bits::<u8, _>(1, iter)
             .map_err(|_| CompressionError::UnexpectedEof)?
             .data()
             == 1;
         match reader
-            .read_bits::<u8>(2)
+            .read_bits::<u8, _>(2, iter)
             .map_err(|_| CompressionError::UnexpectedEof)?
             .data()
         {
@@ -181,11 +187,11 @@ impl DeflaterInner {
             0 => {
                 reader.skip_to_next_byte();
                 let block_len = reader
-                    .read_bits(16)
+                    .read_bits(16, iter)
                     .map_err(|_| CompressionError::UnexpectedEof)?
                     .data();
                 let block_len_checksum = reader
-                    .read_bits::<u32>(16)
+                    .read_bits::<u32, _>(16, iter)
                     .map_err(|_| CompressionError::UnexpectedEof)?
                     .data();
                 if (block_len ^ block_len_checksum) != 0xFFFF {
@@ -220,29 +226,34 @@ impl DeflaterInner {
             2 => {
                 // リテラル/長さ符号の個数
                 let hlit = reader
-                    .read_bits::<u16>(5)
+                    .read_bits::<u16, _>(5, iter)
                     .map_err(|_| CompressionError::UnexpectedEof)?
                     .data()
                     + 257;
                 // 距離符号の個数
                 let hdist = reader
-                    .read_bits::<u16>(5)
+                    .read_bits::<u16, _>(5, iter)
                     .map_err(|_| CompressionError::UnexpectedEof)?
                     .data()
                     + 1;
                 // 長さ符号の個数
                 let hclen = reader
-                    .read_bits::<u32>(4)
+                    .read_bits::<u32, _>(4, iter)
                     .map_err(|_| CompressionError::UnexpectedEof)?
                     .data()
                     + 4;
-                let mut lt = self.dec_len_tree(hclen, reader)?;
-                self.symbol_decoder =
-                    Some(self.dec_huff_tree(&mut lt, hlit as usize, reader)?);
+                let mut lt = self.dec_len_tree(hclen, reader, iter)?;
+                self.symbol_decoder = Some(self.dec_huff_tree(
+                    &mut lt,
+                    hlit as usize,
+                    reader,
+                    iter,
+                )?);
                 self.offset_decoder = Some(self.dec_huff_tree(
                     &mut lt,
                     hdist as usize,
                     reader,
+                    iter,
                 )?);
             }
             // ありえない
@@ -252,16 +263,15 @@ impl DeflaterInner {
     }
 }
 
-impl<R> Decoder<R> for DeflaterInner
-where
-    R: BitRead<Right>,
-{
+impl BitDecodeService for DeflaterInner {
+    type Direction = Right;
     type Error = CompressionError;
     type Output = LzssCode;
 
-    fn next(
+    fn next<I: Iterator<Item = u8>>(
         &mut self,
-        reader: &mut R,
+        reader: &mut BitReader<Self::Direction>,
+        iter: &mut I,
     ) -> Result<Option<LzssCode>, CompressionError> {
         loop {
             if self
@@ -272,9 +282,9 @@ where
                 if self.is_final {
                     return Ok(None);
                 }
-                self.init_block(reader)?;
+                self.init_block(reader, iter)?;
             } else if let Some(sym) =
-                self.symbol_decoder.as_mut().unwrap().dec(reader)?
+                self.symbol_decoder.as_mut().unwrap().dec(reader, iter)?
             {
                 if sym <= 255 {
                     return Ok(Some(LzssCode::Symbol(sym as u8)));
@@ -285,7 +295,7 @@ where
                         len_index,
                         if extbits != 0 {
                             reader
-                                .read_bits(extbits)
+                                .read_bits(extbits, iter)
                                 .map_err(|_| CompressionError::UnexpectedEof)?
                                 .data()
                         } else {
@@ -296,7 +306,7 @@ where
                         .offset_decoder
                         .as_mut()
                         .unwrap()
-                        .dec(reader)?
+                        .dec(reader, iter)?
                         .ok_or_else(|| CompressionError::UnexpectedEof)?
                         as usize;
                     let off_extbits = (&self.offset_tab).ext_bits(off_index);
@@ -304,7 +314,7 @@ where
                         off_index,
                         if off_extbits != 0 {
                             reader
-                                .read_bits(off_extbits)
+                                .read_bits(off_extbits, iter)
                                 .map_err(|_| CompressionError::UnexpectedEof)?
                                 .data()
                         } else {
@@ -318,18 +328,18 @@ where
     }
 }
 
-pub struct Deflater {
+pub struct DeflaterBase {
     inner: DeflaterInner,
     lzss_decoder: LzssDecoder,
 }
 
-impl Default for Deflater {
+impl Default for DeflaterBase {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Deflater {
+impl DeflaterBase {
     const MAX_BLOCK_SIZE: usize = 0x1_0000;
 
     pub fn new() -> Self {
@@ -347,14 +357,64 @@ impl Deflater {
     }
 }
 
-impl<R> Decoder<R> for Deflater
-where
-    R: BitRead<Right>,
-{
+impl BitDecodeService for DeflaterBase {
+    type Direction = Right;
     type Error = CompressionError;
     type Output = u8;
 
-    fn next(&mut self, iter: &mut R) -> Result<Option<u8>, Self::Error> {
-        self.lzss_decoder.next(&mut self.inner.iter(iter))
+    fn next<I: Iterator<Item = u8>>(
+        &mut self,
+        reader: &mut BitReader<Self::Direction>,
+        iter: &mut I,
+    ) -> Result<Option<u8>, Self::Error> {
+        let mut bd = BitDecoder::<DeflaterInner, _, _>::with_service(
+            &mut self.inner,
+            reader,
+        );
+        self.lzss_decoder
+            .next(&mut DecodeIterator::<I, _, _>::new(iter, &mut bd).flatten())
+            .transpose()
+    }
+}
+
+pub struct Deflater {
+    inner: BitDecoderImpl<DeflaterBase>,
+}
+
+impl Deflater {
+    pub fn new() -> Self {
+        Self {
+            inner: BitDecoderImpl::<DeflaterBase>::new(),
+        }
+    }
+
+    pub fn with_dict(dict: &[u8]) -> Self {
+        Self {
+            inner: BitDecoderImpl::<DeflaterBase>::with_service(
+                DeflaterBase::with_dict(dict),
+                BitReader::new(),
+            ),
+        }
+    }
+}
+
+impl Default for Deflater {
+    fn default() -> Self {
+        Self {
+            inner: BitDecoderImpl::<DeflaterBase>::new(),
+        }
+    }
+}
+
+impl Decoder for Deflater {
+    type Input = u8;
+    type Output = u8;
+    type Error = CompressionError;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
     }
 }

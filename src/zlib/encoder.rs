@@ -109,6 +109,8 @@ impl ZlibEncoder {
 
 impl Encoder for ZlibEncoder {
     type Error = CompressionError;
+    type In = u8;
+    type Out = u8;
     fn next<I: Iterator<Item = u8>>(
         &mut self,
         iter: &mut I,

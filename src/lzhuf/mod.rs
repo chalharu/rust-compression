@@ -87,14 +87,7 @@ mod tests {
 
     #[test]
     fn test_long() {
-        check(
-            &(b"a"
-                .into_iter()
-                .cycle()
-                .take(260)
-                .cloned()
-                .collect::<Vec<u8>>()),
-        );
+        check(&(b"a".iter().cycle().take(260).cloned().collect::<Vec<u8>>()));
     }
 
     #[test]

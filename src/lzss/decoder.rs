@@ -6,8 +6,52 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use cbuffer::CircularBuffer;
+use error::CompressionError;
 use lzss::LzssCode;
+use traits::decoder::Decoder;
 
+/// # Examples
+///
+/// ```rust
+/// extern crate compression;
+/// use compression::prelude::*;
+/// use std::cmp::Ordering;
+///
+/// fn main() {
+///     pub fn comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
+///         match (lhs, rhs) {
+///             (
+///                 LzssCode::Reference {
+///                     len: llen,
+///                     pos: lpos,
+///                 },
+///                 LzssCode::Reference {
+///                     len: rlen,
+///                     pos: rpos,
+///                 },
+///             ) => ((llen << 3) + rpos).cmp(&((rlen << 3) + lpos)).reverse(),
+///             (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
+///             (_, LzssCode::Symbol(_)) => Ordering::Greater,
+///             (LzssCode::Symbol(_), _) => Ordering::Less,
+///         }
+///     }
+///     # #[cfg(feature = "lzss")]
+///     let compressed = b"aabbaabbaabbaabb\n"
+///         .into_iter()
+///         .cloned()
+///         .encode(&mut LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3), Action::Finish)
+///         .collect::<Result<Vec<_>, _>>()
+///         .unwrap();
+///
+///     # #[cfg(feature = "lzss")]
+///     let decompressed = compressed
+///         .iter()
+///         .cloned()
+///         .decode(&mut LzssDecoder::new(0x1_0000))
+///         .collect::<Result<Vec<_>, _>>()
+///         .unwrap();
+/// }
+/// ```
 pub struct LzssDecoder {
     buf: CircularBuffer<u8>,
     offset: usize,
@@ -21,21 +65,25 @@ impl LzssDecoder {
         }
     }
 
-    #[cfg(feature = "deflate")]
     pub fn with_dict(size_of_window: usize, dict: &[u8]) -> Self {
         let mut buf = CircularBuffer::new(size_of_window);
         buf.append(dict);
         Self { buf, offset: 0 }
     }
+}
 
-    pub fn next<E>(
+impl Decoder for LzssDecoder {
+    type Input = LzssCode;
+    type Error = CompressionError;
+    type Output = u8;
+
+    fn next<I: Iterator<Item = Self::Input>>(
         &mut self,
-        s: &mut dyn Iterator<Item = Result<LzssCode, E>>,
-    ) -> Result<Option<u8>, E> {
+        s: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
         while self.offset == 0 {
             match s.next() {
-                Some(Err(e)) => return Err(e),
-                Some(Ok(s)) => match s {
+                Some(s) => match s {
                     LzssCode::Symbol(s) => {
                         self.buf.push(s);
                         self.offset += 1;
@@ -48,11 +96,11 @@ impl LzssDecoder {
                         }
                     }
                 },
-                None => return Ok(None),
+                None => return None,
             }
         }
         self.offset -= 1;
-        Ok(Some(self.buf[self.offset]))
+        Some(Ok(self.buf[self.offset]))
     }
 }
 
@@ -64,6 +112,7 @@ mod tests {
     use alloc::vec::Vec;
     use lzss::encoder::LzssEncoder;
     use lzss::tests::comparison;
+    use traits::encoder::Encoder;
 
     #[test]
     fn test() {
@@ -72,12 +121,14 @@ mod tests {
         let mut iter = testvec.iter().cloned();
         let enc_ret = (0..)
             .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         let mut decoder = LzssDecoder::new(0x1_0000);
-        let mut dec_iter = enc_ret.into_iter().map::<Result<_, ()>, _>(Ok);
+        let mut dec_iter = enc_ret.into_iter();
         let ret = (0..)
-            .scan((), |_, _| decoder.next(&mut dec_iter).unwrap())
+            .scan((), |_, _| decoder.next(&mut dec_iter))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(testvec.to_vec(), ret);

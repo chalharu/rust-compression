@@ -11,9 +11,9 @@ use error::CompressionError;
 
 pub trait EncodeExt<I>
 where
-    I: Iterator<Item = u8>,
+    I: Iterator,
 {
-    fn encode<E: Encoder>(
+    fn encode<E: Encoder<In = I::Item>>(
         self,
         encoder: &mut E,
         action: Action,
@@ -24,9 +24,9 @@ where
 
 impl<I> EncodeExt<I::IntoIter> for I
 where
-    I: IntoIterator<Item = u8>,
+    I: IntoIterator,
 {
-    fn encode<E: Encoder>(
+    fn encode<E: Encoder<In = I::Item>>(
         self,
         encoder: &mut E,
         action: Action,
@@ -40,7 +40,7 @@ where
 
 pub struct EncodeIterator<'a, I, E>
 where
-    I: Iterator<Item = u8>,
+    I: Iterator<Item = E::In>,
     E: Encoder + 'a,
     CompressionError: From<E::Error>,
 {
@@ -51,7 +51,7 @@ where
 
 impl<'a, I, E> EncodeIterator<'a, I, E>
 where
-    I: Iterator<Item = u8>,
+    I: Iterator<Item = E::In>,
     E: Encoder,
     CompressionError: From<E::Error>,
 {
@@ -66,13 +66,13 @@ where
 
 impl<'a, I, E> Iterator for EncodeIterator<'a, I, E>
 where
-    I: Iterator<Item = u8>,
+    I: Iterator<Item = E::In>,
     E: Encoder,
     CompressionError: From<E::Error>,
 {
-    type Item = Result<u8, E::Error>;
+    type Item = Result<E::Out, E::Error>;
 
-    fn next(&mut self) -> Option<Result<u8, E::Error>> {
+    fn next(&mut self) -> Option<Result<E::Out, E::Error>> {
         self.encoder.next(&mut self.inner, self.action)
     }
 }
@@ -82,9 +82,11 @@ where
     CompressionError: From<Self::Error>,
 {
     type Error;
-    fn next<I: Iterator<Item = u8>>(
+    type In;
+    type Out;
+    fn next<I: Iterator<Item = Self::In>>(
         &mut self,
         iter: &mut I,
         action: Action,
-    ) -> Option<Result<u8, Self::Error>>;
+    ) -> Option<Result<Self::Out, Self::Error>>;
 }

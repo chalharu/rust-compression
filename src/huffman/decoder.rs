@@ -176,11 +176,12 @@ impl<D: Direction> HuffmanDecoder<D> {
         })
     }
 
-    pub fn dec<R: BitRead<D>>(
+    pub fn dec<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         reader: &mut R,
+        iter: &mut I,
     ) -> Result<Option<u16>, String> {
-        let c = reader.peek_bits::<usize>(self.stab_bits)?;
+        let c = reader.peek_bits::<usize, _>(self.stab_bits, iter)?;
         if c.is_empty() {
             return Ok(None);
         }
@@ -190,10 +191,10 @@ impl<D: Direction> HuffmanDecoder<D> {
             *c.data_ref()
         };
         if let SymbolTableItem::Short(ref v, ref l) = self.stab[c] {
-            reader.skip_bits(*l as usize)?;
+            reader.skip_bits(*l as usize, iter)?;
             Ok(Some(*v))
         } else if let SymbolTableItem::Long(ref leaf) = self.stab[c] {
-            reader.skip_bits(self.stab_bits)?;
+            reader.skip_bits(self.stab_bits, iter)?;
             let mut lleaf = leaf;
 
             // 32ビット以上はエラーとするコードもあるが、
@@ -202,15 +203,16 @@ impl<D: Direction> HuffmanDecoder<D> {
                 match *lleaf {
                     HuffmanLeaf::Leaf(v) => return Ok(Some(v)),
                     HuffmanLeaf::Branch(ref lft, ref rgt) => {
-                        lleaf = if let Ok(b) = reader.read_bits::<u8>(1) {
-                            if *b.data_ref() == 0 {
-                                lft
+                        lleaf =
+                            if let Ok(b) = reader.read_bits::<u8, _>(1, iter) {
+                                if *b.data_ref() == 0 {
+                                    lft
+                                } else {
+                                    rgt
+                                }
                             } else {
-                                rgt
-                            }
-                        } else {
-                            return Err("reader error".to_owned());
-                        };
+                                return Err("reader error".to_owned());
+                            };
                     }
                     HuffmanLeaf::None => {
                         return Err("huffman table error".to_owned())

@@ -49,6 +49,7 @@ impl<T> SmallBitVec<T> {
 
 impl<T: Copy> SmallBitVec<T> {
     #[inline]
+    #[cfg(any(feature = "bzip2", feature = "deflate", feature = "lzhuf"))]
     pub fn data(&self) -> T {
         self.data
     }

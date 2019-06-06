@@ -144,28 +144,20 @@ mod tests {
         let type_arr = LSTypeArray::with_shift(test_str, 0);
         let ls_value = &[
             //  0      1      2      3      4
-             true, false, false,  true,  true,
-            false, false,  true, false,  true,
-             true, false,  true, false, false,
-             true,  true,  true, false,  true,
-             true, false,  true,  true, false,
-             true,  true, false,  true, false,
-             true, false, false, false,  true,
-             true, false,  true,  true, false,
-             true, false,  true, false, false,
-             true,  true, false, false ];
+            true, false, false, true, true, false, false, true, false, true,
+            true, false, true, false, false, true, true, true, false, true,
+            true, false, true, true, false, true, true, false, true, false,
+            true, false, false, false, true, true, false, true, true, false,
+            true, false, true, false, false, true, true, false, false,
+        ];
         let lms_value = &[
             //  0      1      2      3      4
-            false, false, false,  true, false,
-            false, false,  true, false,  true,
-            false, false,  true, false, false,
-             true, false, false, false,  true,
-            false, false,  true, false, false,
-             true, false, false,  true, false,
-             true, false, false, false,  true,
-            false, false,  true, false, false,
-             true, false,  true, false, false,
-             true, false, false, false ];
+            false, false, false, true, false, false, false, true, false, true,
+            false, false, true, false, false, true, false, false, false, true,
+            false, false, true, false, false, true, false, false, true, false,
+            true, false, false, false, true, false, false, true, false, false,
+            true, false, true, false, false, true, false, false, false,
+        ];
 
         for i in 0..type_arr.len() {
             assert_eq!(type_arr.get(i), ls_value[i]);

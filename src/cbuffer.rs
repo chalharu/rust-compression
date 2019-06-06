@@ -78,7 +78,7 @@ impl<T> CircularBuffer<T> {
         self.data.len()
     }
 
-    #[cfg(any(feature = "lzhuf", feature = "deflate", test))]
+    #[cfg(any(feature = "lzss", test))]
     pub fn push(&mut self, data: T) {
         self.data[self.pos] = data;
         self.pos += 1;
