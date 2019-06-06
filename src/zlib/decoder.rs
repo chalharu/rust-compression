@@ -13,7 +13,7 @@ use bitio::reader::{BitRead, BitReader};
 use core::hash::Hasher;
 use deflate::decoder::DeflaterBase;
 use error::CompressionError;
-use traits::decoder::{BitDecodeService, BitDecoderImpl};
+use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 
 #[derive(Default)]
 pub struct ZlibDecoderBase {
@@ -26,18 +26,7 @@ pub struct ZlibDecoderBase {
 }
 
 impl ZlibDecoderBase {
-    pub fn new() -> Self {
-        Self {
-            deflater: DeflaterBase::new(),
-            adler32: Adler32::new(),
-            dict_hash: None,
-            header: Vec::new(),
-            header_needlen: 0,
-            header_checked: false,
-        }
-    }
-
-    pub fn with_dict(dict: &[u8]) -> Self {
+    fn with_dict(dict: &[u8]) -> Self {
         let mut dict_idc = Adler32::new();
         dict_idc.write(dict);
         Self {
@@ -145,10 +134,44 @@ impl BitDecodeService for ZlibDecoderBase {
     }
 }
 
-pub type ZlibDecoder = BitDecoderImpl<ZlibDecoderBase>;
+pub struct ZlibDecoder {
+    inner: BitDecoderImpl<ZlibDecoderBase>,
+}
 
 impl ZlibDecoder {
+    pub fn new() -> Self {
+        Self {
+            inner: BitDecoderImpl::<ZlibDecoderBase>::new(),
+        }
+    }
+
     pub fn with_dict(dict: &[u8]) -> Self {
-        Self::with_service(ZlibDecoderBase::with_dict(dict), BitReader::new())
+        Self {
+            inner: BitDecoderImpl::<ZlibDecoderBase>::with_service(
+                ZlibDecoderBase::with_dict(dict),
+                BitReader::new(),
+            ),
+        }
+    }
+}
+
+impl Default for ZlibDecoder {
+    fn default() -> Self {
+        Self {
+            inner: BitDecoderImpl::<ZlibDecoderBase>::new(),
+        }
+    }
+}
+
+impl Decoder for ZlibDecoder {
+    type Input = u8;
+    type Output = u8;
+    type Error = CompressionError;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
     }
 }

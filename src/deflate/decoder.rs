@@ -377,10 +377,44 @@ impl BitDecodeService for DeflaterBase {
     }
 }
 
-pub type Deflater = BitDecoderImpl<DeflaterBase>;
+pub struct Deflater {
+    inner: BitDecoderImpl<DeflaterBase>,
+}
 
 impl Deflater {
+    pub fn new() -> Self {
+        Self {
+            inner: BitDecoderImpl::<DeflaterBase>::new(),
+        }
+    }
+
     pub fn with_dict(dict: &[u8]) -> Self {
-        Self::with_service(DeflaterBase::with_dict(dict), BitReader::new())
+        Self {
+            inner: BitDecoderImpl::<DeflaterBase>::with_service(
+                DeflaterBase::with_dict(dict),
+                BitReader::new(),
+            ),
+        }
+    }
+}
+
+impl Default for Deflater {
+    fn default() -> Self {
+        Self {
+            inner: BitDecoderImpl::<DeflaterBase>::new(),
+        }
+    }
+}
+
+impl Decoder for Deflater {
+    type Input = u8;
+    type Output = u8;
+    type Error = CompressionError;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
     }
 }

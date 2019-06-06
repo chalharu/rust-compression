@@ -13,7 +13,7 @@ use core::hash::{BuildHasher, Hasher};
 use crc32::{BuiltinDigest, IEEE_REVERSE};
 use deflate::decoder::DeflaterBase;
 use error::CompressionError;
-use traits::decoder::{BitDecodeService, BitDecoderImpl};
+use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 
 pub struct GZipDecoderBase {
     deflater: DeflaterBase,
@@ -217,4 +217,35 @@ impl BitDecodeService for GZipDecoderBase {
     }
 }
 
-pub type GZipDecoder = BitDecoderImpl<GZipDecoderBase>;
+pub struct GZipDecoder {
+    inner: BitDecoderImpl<GZipDecoderBase>,
+}
+
+impl GZipDecoder {
+    pub fn new() -> Self {
+        Self {
+            inner: BitDecoderImpl::<GZipDecoderBase>::new(),
+        }
+    }
+}
+
+impl Default for GZipDecoder {
+    fn default() -> Self {
+        Self {
+            inner: BitDecoderImpl::<GZipDecoderBase>::new(),
+        }
+    }
+}
+
+impl Decoder for GZipDecoder {
+    type Input = u8;
+    type Output = u8;
+    type Error = CompressionError;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
+    }
+}

@@ -313,10 +313,30 @@ impl BitDecodeService for LzhufDecoderBase {
     }
 }
 
-pub type LzhufDecoder = BitDecoderImpl<LzhufDecoderBase>;
+pub struct LzhufDecoder {
+    inner: BitDecoderImpl<LzhufDecoderBase>,
+}
 
 impl LzhufDecoder {
     pub fn new(method: &LzhufMethod) -> Self {
-        Self::with_service(LzhufDecoderBase::new(method), BitReader::new())
+        Self {
+            inner: BitDecoderImpl::<LzhufDecoderBase>::with_service(
+                LzhufDecoderBase::new(method),
+                BitReader::new(),
+            ),
+        }
+    }
+}
+
+impl Decoder for LzhufDecoder {
+    type Input = u8;
+    type Output = u8;
+    type Error = CompressionError;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
     }
 }

@@ -18,7 +18,7 @@ use bzip2::{HEADER_h, BZ_G_SIZE, HEADER_0, HEADER_B, HEADER_Z};
 use core::hash::{BuildHasher, Hasher};
 use crc32::{BuiltinDigest, IEEE_NORMAL};
 use huffman::decoder::HuffmanDecoder;
-use traits::decoder::{BitDecodeService, BitDecoderImpl};
+use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 
 const BZ2_R_NUMS: [usize; 512] = [
     619, 720, 127, 481, 931, 816, 813, 233, 566, 247, 985, 724, 205, 454, 863,
@@ -574,4 +574,35 @@ impl BitDecodeService for BZip2DecoderBase {
     }
 }
 
-pub type BZip2Decoder = BitDecoderImpl<BZip2DecoderBase>;
+pub struct BZip2Decoder {
+    inner: BitDecoderImpl<BZip2DecoderBase>,
+}
+
+impl BZip2Decoder {
+    pub fn new() -> Self {
+        Self {
+            inner: BitDecoderImpl::<BZip2DecoderBase>::new(),
+        }
+    }
+}
+
+impl Default for BZip2Decoder {
+    fn default() -> Self {
+        Self {
+            inner: BitDecoderImpl::<BZip2DecoderBase>::new(),
+        }
+    }
+}
+
+impl Decoder for BZip2Decoder {
+    type Input = u8;
+    type Output = u8;
+    type Error = BZip2Error;
+
+    fn next<I: Iterator<Item = Self::Input>>(
+        &mut self,
+        iter: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
+        self.inner.next(iter)
+    }
+}
