@@ -96,101 +96,110 @@ where
     ) -> Option<Result<Self::Output, Self::Error>>;
 }
 
-pub struct BitDecoder<T, R, B>
-where
-    T: BitDecodeService,
-    CompressionError: From<T::Error>,
-    R: BorrowMut<BitReader<T::Direction>>,
-    B: BorrowMut<T>,
-{
-    reader: R,
-    service: B,
-    phantom: PhantomData<fn() -> T>,
-}
-
-impl<T> BitDecoder<T, BitReader<T::Direction>, T>
-where
-    T: BitDecodeService,
-    CompressionError: From<T::Error>,
-    T: Default,
-    T::Direction: BorrowMut<T::Direction>,
-    BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
-{
-    pub fn new() -> Self {
-        Self {
-            reader: BitReader::new(),
-            service: T::default(),
-            phantom: PhantomData,
+cfg_if! {
+    if #[cfg(any(feature = "bzip2", feature="deflate", feature="lzhuf"))] {
+        pub struct BitDecoder<T, R, B>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            R: BorrowMut<BitReader<T::Direction>>,
+            B: BorrowMut<T>,
+        {
+            reader: R,
+            service: B,
+            phantom: PhantomData<fn() -> T>,
         }
-    }
-}
 
-impl<T, R, B> BitDecoder<T, R, B>
-where
-    T: BitDecodeService,
-    CompressionError: From<T::Error>,
-    R: BorrowMut<BitReader<T::Direction>>,
-    B: BorrowMut<T>,
-{
-    pub fn with_service(service: B, reader: R) -> Self {
-        Self {
-            reader,
-            service,
-            phantom: PhantomData,
+        #[cfg(any(feature = "bzip2", feature="deflate"))]
+        impl<T> BitDecoder<T, BitReader<T::Direction>, T>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            T: Default,
+            T::Direction: BorrowMut<T::Direction>,
+            BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
+        {
+            pub fn new() -> Self {
+                Self {
+                    reader: BitReader::new(),
+                    service: T::default(),
+                    phantom: PhantomData,
+                }
+            }
         }
-    }
-}
-impl<T> Default for BitDecoder<T, BitReader<T::Direction>, T>
-where
-    T: BitDecodeService,
-    CompressionError: From<T::Error>,
-    T: Default,
-    T::Direction: BorrowMut<T::Direction>,
-    BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
-{
-    fn default() -> Self {
-        Self {
-            reader: BitReader::new(),
-            service: T::default(),
-            phantom: PhantomData,
-        }
-    }
-}
 
-impl<T> From<T> for BitDecoder<T, BitReader<T::Direction>, T>
-where
-    T: BitDecodeService,
-    CompressionError: From<T::Error>,
-    T::Direction: BorrowMut<T::Direction>,
-    BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
-{
-    fn from(iter: T) -> Self {
-        Self {
-            reader: BitReader::<T::Direction>::new(),
-            service: iter,
-            phantom: PhantomData,
+        #[cfg(any(feature="zlib", feature="deflate", feature="lzhuf"))]
+        impl<T, R, B> BitDecoder<T, R, B>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            R: BorrowMut<BitReader<T::Direction>>,
+            B: BorrowMut<T>,
+        {
+            pub fn with_service(service: B, reader: R) -> Self {
+                Self {
+                    reader,
+                    service,
+                    phantom: PhantomData,
+                }
+            }
         }
-    }
-}
+        impl<T> Default for BitDecoder<T, BitReader<T::Direction>, T>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            T: Default,
+            T::Direction: BorrowMut<T::Direction>,
+            BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
+        {
+            fn default() -> Self {
+                Self {
+                    reader: BitReader::new(),
+                    service: T::default(),
+                    phantom: PhantomData,
+                }
+            }
+        }
 
-impl<T, R, B> Decoder for BitDecoder<T, R, B>
-where
-    T: BitDecodeService,
-    CompressionError: From<T::Error>,
-    R: BorrowMut<BitReader<T::Direction>>,
-    B: BorrowMut<T>,
-{
-    type Error = T::Error;
-    type Input = u8;
-    type Output = T::Output;
-    fn next<I: Iterator<Item = Self::Input>>(
-        &mut self,
-        iter: &mut I,
-    ) -> Option<Result<Self::Output, Self::Error>> {
-        self.service
-            .borrow_mut()
-            .next(self.reader.borrow_mut(), iter)
-            .transpose()
+        impl<T> From<T> for BitDecoder<T, BitReader<T::Direction>, T>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            T::Direction: BorrowMut<T::Direction>,
+            BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
+        {
+            fn from(iter: T) -> Self {
+                Self {
+                    reader: BitReader::<T::Direction>::new(),
+                    service: iter,
+                    phantom: PhantomData,
+                }
+            }
+        }
+
+        impl<T, R, B> Decoder for BitDecoder<T, R, B>
+        where
+            T: BitDecodeService,
+            CompressionError: From<T::Error>,
+            R: BorrowMut<BitReader<T::Direction>>,
+            B: BorrowMut<T>,
+        {
+            type Error = T::Error;
+            type Input = u8;
+            type Output = T::Output;
+            fn next<I: Iterator<Item = Self::Input>>(
+                &mut self,
+                iter: &mut I,
+            ) -> Option<Result<Self::Output, Self::Error>> {
+                self.service
+                    .borrow_mut()
+                    .next(self.reader.borrow_mut(), iter)
+                    .transpose()
+            }
+        }
+
+        pub type BitDecoderImpl<T> =
+            BitDecoder<T, BitReader<<T as BitDecodeService>::Direction>, T>;
     }
 }
 
@@ -208,6 +217,3 @@ where
         iter: &mut I,
     ) -> Result<Option<Self::Output>, Self::Error>;
 }
-
-pub type BitDecoderImpl<T> =
-    BitDecoder<T, BitReader<<T as BitDecodeService>::Direction>, T>;
