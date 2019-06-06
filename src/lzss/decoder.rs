@@ -10,6 +10,48 @@ use error::CompressionError;
 use lzss::LzssCode;
 use traits::decoder::Decoder;
 
+/// # Examples
+///
+/// ```rust
+/// extern crate compression;
+/// use compression::prelude::*;
+/// use std::cmp::Ordering;
+///
+/// fn main() {
+///     pub fn comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
+///         match (lhs, rhs) {
+///             (
+///                 LzssCode::Reference {
+///                     len: llen,
+///                     pos: lpos,
+///                 },
+///                 LzssCode::Reference {
+///                     len: rlen,
+///                     pos: rpos,
+///                 },
+///             ) => ((llen << 3) + rpos).cmp(&((rlen << 3) + lpos)).reverse(),
+///             (LzssCode::Symbol(_), LzssCode::Symbol(_)) => Ordering::Equal,
+///             (_, LzssCode::Symbol(_)) => Ordering::Greater,
+///             (LzssCode::Symbol(_), _) => Ordering::Less,
+///         }
+///     }
+///     # #[cfg(feature = "lzss")]
+///     let compressed = b"aabbaabbaabbaabb\n"
+///         .into_iter()
+///         .cloned()
+///         .encode(&mut LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3), Action::Finish)
+///         .collect::<Result<Vec<_>, _>>()
+///         .unwrap();
+///
+///     # #[cfg(feature = "lzss")]
+///     let decompressed = compressed
+///         .iter()
+///         .cloned()
+///         .decode(&mut LzssDecoder::new(0x1_0000))
+///         .collect::<Result<Vec<_>, _>>()
+///         .unwrap();
+/// }
+/// ```
 pub struct LzssDecoder {
     buf: CircularBuffer<u8>,
     offset: usize,
