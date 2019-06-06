@@ -9,12 +9,12 @@ use action::Action;
 #[cfg(not(feature = "std"))]
 use alloc::collections::vec_deque::VecDeque;
 use core::cmp::{self, Ordering};
+use error::CompressionError;
 use lzss::compare_match_info;
 use lzss::slidedict::SlideDict;
 use lzss::LzssCode;
 #[cfg(feature = "std")]
 use std::collections::vec_deque::VecDeque;
-use error::CompressionError;
 use traits::encoder::Encoder;
 
 pub struct LzssEncoder<F>

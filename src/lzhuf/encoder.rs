@@ -575,7 +575,7 @@ mod tests {
     fn test_arr() {
         let mut encoder = LzhufEncoder::new(&LzhufMethod::Lh7);
         let a = b"aaaaaaaaaaa"
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -617,7 +617,7 @@ mod tests {
     fn test_empty() {
         let mut encoder = LzhufEncoder::new(&LzhufMethod::Lh7);
         let a = b""
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -629,7 +629,7 @@ mod tests {
     fn test_unit() {
         let mut encoder = LzhufEncoder::new(&LzhufMethod::Lh7);
         let a = b"a"
-            .into_iter()
+            .iter()
             .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
@@ -659,7 +659,7 @@ mod tests {
     fn test_midarr() {
         let mut encoder = LzhufEncoder::new(&LzhufMethod::Lh7);
         let a = b"a"
-            .into_iter()
+            .iter()
             .cycle()
             .take(260)
             .map(|&x| x as u8)

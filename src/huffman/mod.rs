@@ -86,16 +86,15 @@ mod tests {
             HuffmanDecoder::<D>::new(symb_len, stab_bits).unwrap();
 
         let mut writer = BitWriter::<D>::new();
-        let vec = testarray
+        let mut vec = testarray
             .iter()
             .map(|c| hencoder.enc(*c).unwrap())
-            .to_bytes(&mut writer, Action::Flush)
-            .collect::<Vec<_>>();
+            .to_bytes(&mut writer, Action::Flush);
 
-        let mut reader = BitReader::<D, _>::new(vec);
+        let mut reader = BitReader::<D>::new();
 
         let mut ac = Vec::<u16>::new();
-        while let Ok(Some(c)) = hdecoder.dec(&mut reader) {
+        while let Ok(Some(c)) = hdecoder.dec(&mut reader, &mut vec) {
             ac.push(c);
         }
         assert_eq!(ac, testarray.to_vec());

@@ -6,9 +6,9 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 use cbuffer::CircularBuffer;
-use lzss::LzssCode;
 use error::CompressionError;
-use traits::decoder::{Decoder, DecodeExt};
+use lzss::LzssCode;
+use traits::decoder::Decoder;
 
 pub struct LzssDecoder {
     buf: CircularBuffer<u8>,
@@ -30,22 +30,18 @@ impl LzssDecoder {
     }
 }
 
-impl<R, E> Decoder<R> for LzssDecoder
-where
-    R: Iterator<Item = Result<LzssCode, E>>,
-    CompressionError: From<E>,
-{
-    type Error = E;
+impl Decoder for LzssDecoder {
+    type Input = LzssCode;
+    type Error = CompressionError;
     type Output = u8;
 
-    fn next(
+    fn next<I: Iterator<Item = Self::Input>>(
         &mut self,
-        s: &mut R,
-    ) -> Result<Option<Self::Output>, Self::Error> {
+        s: &mut I,
+    ) -> Option<Result<Self::Output, Self::Error>> {
         while self.offset == 0 {
             match s.next() {
-                Some(Err(e)) => return Err(e),
-                Some(Ok(s)) => match s {
+                Some(s) => match s {
                     LzssCode::Symbol(s) => {
                         self.buf.push(s);
                         self.offset += 1;
@@ -58,11 +54,11 @@ where
                         }
                     }
                 },
-                None => return Ok(None),
+                None => return None,
             }
         }
         self.offset -= 1;
-        Ok(Some(self.buf[self.offset]))
+        Some(Ok(self.buf[self.offset]))
     }
 }
 
@@ -87,9 +83,10 @@ mod tests {
             .collect::<Vec<_>>();
 
         let mut decoder = LzssDecoder::new(0x1_0000);
-        let mut dec_iter = enc_ret.into_iter().map::<Result<_, CompressionError>, _>(Ok);
+        let mut dec_iter = enc_ret.into_iter();
         let ret = (0..)
-            .scan((), |_, _| decoder.next(&mut dec_iter).unwrap())
+            .scan((), |_, _| decoder.next(&mut dec_iter))
+            .map(Result::unwrap)
             .collect::<Vec<_>>();
 
         assert_eq!(testvec.to_vec(), ret);
