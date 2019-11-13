@@ -6,14 +6,16 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(any(feature = "bzip2", feature = "gzip"))]
 
-use core::borrow::Borrow;
-use core::hash::{BuildHasher, Hasher};
+use crate::core::borrow::Borrow;
+use crate::core::fmt;
+use crate::core::hash::{BuildHasher, Hasher};
+use lazy_static::lazy_static;
 
 #[cfg(any(feature = "gzip", test))]
 lazy_static! {
-    pub static ref IEEE_REVERSE_TABLE: [u32; 256] =
+    pub(crate) static ref IEEE_REVERSE_TABLE: [u32; 256] =
         { make_table_reverse(0xEDB8_8320) };
-    pub static ref IEEE_REVERSE: DigestBuilder<&'static [u32; 256]> = {
+    pub(crate) static ref IEEE_REVERSE: DigestBuilder<&'static [u32; 256]> = {
         DigestBuilder {
             table: &*IEEE_REVERSE_TABLE,
             initial: 0xFFFF_FFFF,
@@ -24,9 +26,9 @@ lazy_static! {
 
 #[cfg(any(feature = "bzip2"))]
 lazy_static! {
-    pub static ref IEEE_NORMAL_TABLE: [u32; 256] =
+    pub(crate) static ref IEEE_NORMAL_TABLE: [u32; 256] =
         { make_table_normal(0x04C1_1DB7) };
-    pub static ref IEEE_NORMAL: DigestBuilder<&'static [u32; 256]> = {
+    pub(crate) static ref IEEE_NORMAL: DigestBuilder<&'static [u32; 256]> = {
         DigestBuilder {
             table: &*IEEE_NORMAL_TABLE,
             initial: 0xFFFF_FFFF,
@@ -81,15 +83,15 @@ fn update_normal(value: u32, table: &[u32; 256], byte: u8) -> u32 {
     table[(((value >> 24) as u8) ^ byte) as usize] ^ (value << 8)
 }
 
-#[derive(Clone, Copy)]
-pub enum PolynomialRepresentation {
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum PolynomialRepresentation {
     #[cfg(any(feature = "bzip2"))]
     Normal,
     #[cfg(any(feature = "gzip", test))]
     Reverse,
 }
 
-pub struct DigestBuilder<T: Borrow<[u32; 256]> + Clone> {
+pub(crate) struct DigestBuilder<T: Borrow<[u32; 256]> + Clone> {
     table: T,
     initial: u32,
     poly_repr: PolynomialRepresentation,
@@ -106,10 +108,21 @@ impl<T: Borrow<[u32; 256]> + Clone> BuildHasher for DigestBuilder<T> {
     }
 }
 
-pub struct Digest<T: Borrow<[u32; 256]>> {
+pub(crate) struct Digest<T: Borrow<[u32; 256]>> {
     table: T,
     value: u32,
     poly_repr: PolynomialRepresentation,
+}
+
+impl<T: Borrow<[u32; 256]>> fmt::Debug for Digest<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("Digest")
+            // TODO:
+            .field("table", &self.table.borrow().iter())
+            .field("value", &self.value)
+            .field("poly_repr", &self.poly_repr)
+            .finish()
+    }
 }
 
 impl<T: Borrow<[u32; 256]>> Hasher for Digest<T> {
@@ -136,7 +149,7 @@ impl<T: Borrow<[u32; 256]>> Hasher for Digest<T> {
     }
 }
 
-pub type BuiltinDigest = Digest<&'static [u32; 256]>;
+pub(crate) type BuiltinDigest = Digest<&'static [u32; 256]>;
 
 #[cfg(test)]
 mod tests {

@@ -6,13 +6,16 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(any(feature = "bzip2", feature = "deflate", feature = "lzhuf"))]
 
+use crate::core::ops::{Add, Sub};
+use crate::core::usize;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use core::ops::{Add, Sub};
-use core::usize;
 use num_traits::{cast, Bounded, NumCast};
 
-pub trait BucketSort {
+pub(crate) trait BucketSort {
     type Item;
     fn bucket_sort_by_key<
         K: Clone + Add + Sub<Output = K> + NumCast,

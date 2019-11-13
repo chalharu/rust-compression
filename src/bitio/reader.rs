@@ -5,23 +5,24 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use crate::bitio::direction::Direction;
+use crate::bitio::small_bit_vec::SmallBitVec;
+use crate::cbuffer::CircularBuffer;
+use crate::core::cmp;
+use crate::core::iter::Iterator;
+use crate::core::marker::PhantomData;
+use crate::core::mem::size_of;
+use crate::core::ops::{BitOrAssign, Shl, Shr};
 #[cfg(not(feature = "std"))]
 use alloc::borrow::ToOwned;
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-use bitio::direction::Direction;
-use bitio::small_bit_vec::SmallBitVec;
-use cbuffer::CircularBuffer;
-use core::cmp;
-use core::iter::Iterator;
-use core::marker::PhantomData;
-use core::mem::size_of;
-use core::ops::{BitOrAssign, Shl, Shr};
+#[allow(unused_imports)]
+use alloc::{vec, vec::Vec};
 use num_traits::sign::Unsigned;
 
-pub trait BitRead
+pub(crate) trait BitRead
 where
     Self::Direction: Direction,
 {
@@ -57,8 +58,8 @@ where
     fn skip_to_next_byte(&mut self) -> usize;
 }
 
-#[derive(Clone)]
-pub struct BitReader<D: Direction> {
+#[derive(Clone, Debug)]
+pub(crate) struct BitReader<D: Direction> {
     buf: u8,
     counter: usize,
     cbuf: CircularBuffer<u8>,
@@ -171,7 +172,7 @@ impl<D: Direction> BitRead for BitReader<D> {
     {
         let r = self.peek_bits::<T, R>(len, iter);
         if let Ok(ref l) = r {
-            self.skip_bits::<_>(l.len(), iter)?;
+            let _ = self.skip_bits::<_>(l.len(), iter)?;
         }
         r
     }
@@ -188,12 +189,12 @@ const DEFAULT_BUF_SIZE: usize = 8; // u64まで対応可能
 
 impl<D: Direction> BitReader<D> {
     #[inline]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::with_capacity(DEFAULT_BUF_SIZE)
     }
 
     #[inline]
-    pub fn with_capacity(cap: usize) -> Self {
+    pub(crate) fn with_capacity(cap: usize) -> Self {
         Self {
             buf: 0,
             counter: 0,
@@ -204,7 +205,7 @@ impl<D: Direction> BitReader<D> {
     }
 
     #[inline]
-    pub fn buffer_cap(&self) -> usize {
+    pub(crate) fn buffer_cap(&self) -> usize {
         self.cbuf.cap() - self.pos
     }
 
@@ -227,10 +228,10 @@ impl<D: Direction> Default for BitReader<D> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use action::Action;
-    use bitio::direction::left::Left;
-    use bitio::direction::right::Right;
-    use bitio::writer::{BitWriteExt, BitWriter};
+    use crate::action::Action;
+    use crate::bitio::direction::left::Left;
+    use crate::bitio::direction::right::Right;
+    use crate::bitio::writer::{BitWriteExt, BitWriter};
 
     #[test]
     fn leftbitreader_read() {
@@ -517,5 +518,4 @@ mod tests {
             Some(SmallBitVec::new(200, 8))
         );
     }
-
 }

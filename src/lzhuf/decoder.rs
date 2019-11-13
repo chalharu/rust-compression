@@ -5,26 +5,30 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-use bitio::direction::left::Left;
-use bitio::reader::{BitRead, BitReader};
-use error::CompressionError;
-use huffman::decoder::HuffmanDecoder;
-use lzhuf::{LzhufMethod, LZSS_MIN_MATCH};
-use lzss::decoder::LzssDecoder;
-use lzss::LzssCode;
-use traits::decoder::{
+use crate::bitio::direction::left::Left;
+use crate::bitio::reader::{BitRead, BitReader};
+use crate::error::CompressionError;
+use crate::huffman::decoder::HuffmanDecoder;
+use crate::lzhuf::{LzhufMethod, LZSS_MIN_MATCH};
+use crate::lzss::decoder::LzssDecoder;
+use crate::lzss::LzssCode;
+use crate::traits::decoder::{
     BitDecodeService, BitDecoder, BitDecoderImpl, DecodeIterator, Decoder,
 };
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 
+#[derive(Debug)]
 enum LzhufHuffmanDecoder {
     HuffmanDecoder(HuffmanDecoder<Left>),
     Default(u16),
 }
 
 impl LzhufHuffmanDecoder {
-    pub fn dec<R: BitRead, I: Iterator<Item = u8>>(
+    pub(crate) fn dec<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         reader: &mut R,
         iter: &mut I,
@@ -38,7 +42,8 @@ impl LzhufHuffmanDecoder {
     }
 }
 
-pub struct LzhufDecoderInner {
+#[derive(Debug)]
+pub(crate) struct LzhufDecoderInner {
     offset_len: usize,
     min_match: usize,
     block_len: usize,
@@ -49,7 +54,7 @@ pub struct LzhufDecoderInner {
 impl LzhufDecoderInner {
     const SEARCH_TAB_LEN: usize = 12;
 
-    pub fn new(method: &LzhufMethod) -> Self {
+    pub(crate) fn new(method: LzhufMethod) -> Self {
         Self {
             offset_len: method.offset_bits(),
             min_match: LZSS_MIN_MATCH,
@@ -277,7 +282,8 @@ impl BitDecodeService for LzhufDecoderInner {
     }
 }
 
-pub struct LzhufDecoderBase {
+#[derive(Debug)]
+pub(crate) struct LzhufDecoderBase {
     lzss_decoder: LzssDecoder,
     inner: LzhufDecoderInner,
 }
@@ -285,7 +291,7 @@ pub struct LzhufDecoderBase {
 impl LzhufDecoderBase {
     const MAX_BLOCK_SIZE: usize = 0x1_0000;
 
-    pub fn new(method: &LzhufMethod) -> Self {
+    pub(crate) fn new(method: LzhufMethod) -> Self {
         Self {
             lzss_decoder: LzssDecoder::new(Self::MAX_BLOCK_SIZE),
             inner: LzhufDecoderInner::new(method),
@@ -313,6 +319,7 @@ impl BitDecodeService for LzhufDecoderBase {
     }
 }
 
+#[derive(Debug)]
 pub struct LzhufDecoder {
     inner: BitDecoderImpl<LzhufDecoderBase>,
 }
@@ -321,7 +328,7 @@ impl LzhufDecoder {
     pub fn new(method: &LzhufMethod) -> Self {
         Self {
             inner: BitDecoderImpl::<LzhufDecoderBase>::with_service(
-                LzhufDecoderBase::new(method),
+                LzhufDecoderBase::new(*method),
                 BitReader::new(),
             ),
         }

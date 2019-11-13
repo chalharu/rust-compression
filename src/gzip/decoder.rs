@@ -5,17 +5,21 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use crate::bitio::direction::right::Right;
+use crate::bitio::reader::{BitRead, BitReader};
+use crate::core::hash::{BuildHasher, Hasher};
+use crate::crc32::{BuiltinDigest, IEEE_REVERSE};
+use crate::deflate::decoder::DeflaterBase;
+use crate::error::CompressionError;
+use crate::traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::direction::right::Right;
-use bitio::reader::{BitRead, BitReader};
-use core::hash::{BuildHasher, Hasher};
-use crc32::{BuiltinDigest, IEEE_REVERSE};
-use deflate::decoder::DeflaterBase;
-use error::CompressionError;
-use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 
-pub struct GZipDecoderBase {
+#[derive(Debug)]
+pub(crate) struct GZipDecoderBase {
     deflater: DeflaterBase,
     crc32: BuiltinDigest,
     header: Vec<u8>,
@@ -31,7 +35,7 @@ impl Default for GZipDecoderBase {
 }
 
 impl GZipDecoderBase {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             deflater: DeflaterBase::new(),
             crc32: IEEE_REVERSE.build_hasher(),
@@ -198,7 +202,7 @@ impl BitDecodeService for GZipDecoderBase {
                         return Ok(Some(s));
                     }
                     Ok(None) => {
-                        reader.skip_to_next_byte();
+                        let _ = reader.skip_to_next_byte();
 
                         let c = Self::read_u32(reader, iter)?;
                         if u64::from(c) != self.crc32.finish() {
@@ -217,6 +221,7 @@ impl BitDecodeService for GZipDecoderBase {
     }
 }
 
+#[derive(Debug)]
 pub struct GZipDecoder {
     inner: BitDecoderImpl<GZipDecoderBase>,
 }

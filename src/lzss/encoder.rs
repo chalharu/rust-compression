@@ -5,22 +5,21 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use action::Action;
+use crate::action::Action;
+use crate::core::cmp::{self, Ordering};
+use crate::error::CompressionError;
+use crate::lzss::compare_match_info;
+use crate::lzss::slidedict::SlideDict;
+use crate::lzss::LzssCode;
+use crate::traits::encoder::Encoder;
 #[cfg(not(feature = "std"))]
 use alloc::collections::vec_deque::VecDeque;
-use core::cmp::{self, Ordering};
-use error::CompressionError;
-use lzss::compare_match_info;
-use lzss::slidedict::SlideDict;
-use lzss::LzssCode;
 #[cfg(feature = "std")]
 use std::collections::vec_deque::VecDeque;
-use traits::encoder::Encoder;
 
 /// # Examples
 ///
 /// ```rust
-/// extern crate compression;
 /// use compression::prelude::*;
 /// use std::cmp::Ordering;
 ///
@@ -59,6 +58,7 @@ use traits::encoder::Encoder;
 ///         .unwrap();
 /// }
 /// ```
+#[derive(Debug)]
 pub struct LzssEncoder<F>
 where
     F: Fn(LzssCode, LzssCode) -> Ordering + Copy,
@@ -236,9 +236,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lzss::tests::comparison;
+    #[cfg(not(feature = "std"))]
+    #[allow(unused_imports)]
+    use alloc::vec;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use lzss::tests::comparison;
 
     #[test]
     fn test_unit() {

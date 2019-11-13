@@ -5,6 +5,13 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use crate::bitio::direction::Direction;
+use crate::bitio::reader::BitRead;
+use crate::bitio::small_bit_vec::{SmallBitVec, SmallBitVecReverse};
+use crate::core::cmp;
+use crate::core::marker::PhantomData;
+use crate::core::ops::{Add, BitAnd, Shl, Shr, Sub};
+use crate::huffman::create_huffman_table;
 #[cfg(not(feature = "std"))]
 use alloc::borrow::ToOwned;
 #[cfg(not(feature = "std"))]
@@ -12,22 +19,19 @@ use alloc::boxed::Box;
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::direction::Direction;
-use bitio::reader::BitRead;
-use bitio::small_bit_vec::{SmallBitVec, SmallBitVecReverse};
-use core::cmp;
-use core::marker::PhantomData;
-use core::ops::{Add, BitAnd, Shl, Shr, Sub};
-use huffman::create_huffman_table;
 
-pub struct HuffmanDecoder<D: Direction> {
+#[derive(Debug)]
+pub(crate) struct HuffmanDecoder<D: Direction> {
     stab_bits: usize,
     stab: Vec<SymbolTableItem>,
     phantom: PhantomData<fn() -> D>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum HuffmanLeaf {
     Leaf(u16),
     Branch(Box<HuffmanLeaf>, Box<HuffmanLeaf>),
@@ -36,11 +40,11 @@ enum HuffmanLeaf {
 
 impl HuffmanLeaf {
     #[inline]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         HuffmanLeaf::None
     }
 
-    pub fn add<T>(
+    pub(crate) fn add<T>(
         &mut self,
         code: &SmallBitVec<T>,
         value: u16,
@@ -83,7 +87,7 @@ impl HuffmanLeaf {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum SymbolTableItem {
     Short(u16, u8),
     Long(HuffmanLeaf),
@@ -91,7 +95,10 @@ enum SymbolTableItem {
 }
 
 impl<D: Direction> HuffmanDecoder<D> {
-    pub fn new(symb_len: &[u8], mut stab_bits: usize) -> Result<Self, String> {
+    pub(crate) fn new(
+        symb_len: &[u8],
+        mut stab_bits: usize,
+    ) -> Result<Self, String> {
         let max_len =
             symb_len.iter().cloned().max().unwrap_or_else(|| 0) as usize;
         stab_bits = cmp::min(max_len, stab_bits);
@@ -176,7 +183,7 @@ impl<D: Direction> HuffmanDecoder<D> {
         })
     }
 
-    pub fn dec<R: BitRead, I: Iterator<Item = u8>>(
+    pub(crate) fn dec<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         reader: &mut R,
         iter: &mut I,
@@ -191,10 +198,10 @@ impl<D: Direction> HuffmanDecoder<D> {
             *c.data_ref()
         };
         if let SymbolTableItem::Short(ref v, ref l) = self.stab[c] {
-            reader.skip_bits(*l as usize, iter)?;
+            let _ = reader.skip_bits(*l as usize, iter)?;
             Ok(Some(*v))
         } else if let SymbolTableItem::Long(ref leaf) = self.stab[c] {
-            reader.skip_bits(self.stab_bits, iter)?;
+            let _ = reader.skip_bits(self.stab_bits, iter)?;
             let mut lleaf = leaf;
 
             // 32ビット以上はエラーとするコードもあるが、

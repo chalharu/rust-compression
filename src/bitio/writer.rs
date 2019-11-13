@@ -5,17 +5,20 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use action::Action;
-use bitio::direction::Direction;
-use bitio::small_bit_vec::SmallBitVec;
-use core::borrow::BorrowMut;
-use core::marker::PhantomData;
-use core::mem::size_of;
-use core::ops::{BitOr, Shl, Shr};
+use crate::action::Action;
+use crate::bitio::direction::Direction;
+use crate::bitio::small_bit_vec::SmallBitVec;
+use crate::core::borrow::BorrowMut;
+use crate::core::marker::PhantomData;
+use crate::core::mem::size_of;
+use crate::core::ops::{BitOr, Shl, Shr};
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 use num_traits::sign::Unsigned;
 use num_traits::{cast, NumCast};
 
-pub trait BitWriteExt<T, I>
+pub(crate) trait BitWriteExt<T, I>
 where
     T: Copy
         + BitOr<Output = T>
@@ -57,7 +60,7 @@ where
     }
 }
 
-pub struct BitIterator<T, D, I, W>
+pub(crate) struct BitIterator<T, D, I, W>
 where
     T: Copy
         + BitOr<Output = T>
@@ -158,8 +161,8 @@ where
     }
 }
 
-#[derive(Clone)]
-pub struct BitWriter<D: Direction> {
+#[derive(Clone, Debug)]
+pub(crate) struct BitWriter<D: Direction> {
     buf: u8,
     counter: usize,
     phantom: PhantomData<fn() -> D>,
@@ -172,7 +175,7 @@ impl<D: Direction> Default for BitWriter<D> {
 }
 
 impl<D: Direction> BitWriter<D> {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             buf: 0,
             counter: 0,
@@ -180,7 +183,7 @@ impl<D: Direction> BitWriter<D> {
         }
     }
 
-    pub fn write_bits<T>(&mut self, data: &SmallBitVec<T>) -> (T, usize)
+    pub(crate) fn write_bits<T>(&mut self, data: &SmallBitVec<T>) -> (T, usize)
     where
         T: Copy
             + BitOr<Output = T>
@@ -220,7 +223,7 @@ impl<D: Direction> BitWriter<D> {
         (wdata, wlen)
     }
 
-    pub fn flush<T>(&mut self) -> Option<(T, usize)>
+    pub(crate) fn flush<T>(&mut self) -> Option<(T, usize)>
     where
         T: Copy
             + BitOr<Output = T>
@@ -242,10 +245,10 @@ impl<D: Direction> BitWriter<D> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bitio::direction::left::Left;
+    use crate::bitio::direction::right::Right;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use bitio::direction::left::Left;
-    use bitio::direction::right::Right;
 
     #[test]
     fn leftbitwriter_write() {

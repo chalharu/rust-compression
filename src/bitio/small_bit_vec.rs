@@ -5,10 +5,10 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use core::mem::size_of;
+use crate::core::mem::size_of;
 
 #[derive(Clone, Debug, Eq)]
-pub struct SmallBitVec<T = u32> {
+pub(crate) struct SmallBitVec<T = u32> {
     data: T,
     len: usize,
 }
@@ -23,7 +23,7 @@ where
 }
 
 impl<T> SmallBitVec<T> {
-    pub fn new(data: T, len: usize) -> Self {
+    pub(crate) fn new(data: T, len: usize) -> Self {
         debug_assert!(
             (size_of::<T>() * 8) >= len,
             "len is greater than bit capacity"
@@ -32,17 +32,17 @@ impl<T> SmallBitVec<T> {
     }
 
     #[inline]
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.len
     }
 
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.len == 0
     }
 
     #[inline]
-    pub fn data_ref(&self) -> &T {
+    pub(crate) fn data_ref(&self) -> &T {
         &self.data
     }
 }
@@ -50,12 +50,12 @@ impl<T> SmallBitVec<T> {
 impl<T: Copy> SmallBitVec<T> {
     #[inline]
     #[cfg(any(feature = "bzip2", feature = "deflate", feature = "lzhuf"))]
-    pub fn data(&self) -> T {
+    pub(crate) fn data(&self) -> T {
         self.data
     }
 }
 
-pub trait SmallBitVecReverse {
+pub(crate) trait SmallBitVecReverse {
     fn reverse(&self) -> Self;
 }
 

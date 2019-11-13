@@ -5,18 +5,22 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use crate::cbuffer::CircularBuffer;
+use crate::core::cmp::{self, Ordering};
+use crate::core::mem;
+use crate::core::ops::Index;
+use crate::core::slice;
+use crate::core::u16;
+use crate::lzss::compare_match_info;
+use crate::lzss::LzssCode;
+use crate::lzss::MatchInfo;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use cbuffer::CircularBuffer;
-use core::cmp::{self, Ordering};
-use core::mem;
-use core::ops::Index;
-use core::slice;
-use core::u16;
-use lzss::compare_match_info;
-use lzss::LzssCode;
-use lzss::MatchInfo;
 
+#[derive(Debug)]
 struct HashTab {
     search_tab: Vec<u16>,
     flag_tab: Vec<u8>,
@@ -56,10 +60,10 @@ impl HashTab {
     const HASH_FRAC: usize = 0x7A7C_4F9F_7A7C_4F9F;
 
     #[inline]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            search_tab: vec![0_u16; Self::TAB_LEN as usize],
-            flag_tab: vec![0_u8; (Self::TAB_LEN as usize) >> 2],
+            search_tab: vec![0_u16; Self::TAB_LEN],
+            flag_tab: vec![0_u8; Self::TAB_LEN >> 2],
             len: 0,
         }
     }
@@ -92,7 +96,7 @@ impl HashTab {
         }
     }
 
-    pub fn push(&mut self, data: &[u8]) -> Option<usize> {
+    pub(crate) fn push(&mut self, data: &[u8]) -> Option<usize> {
         let hash = Self::get_hash(data);
         let f = (self.flag_tab[hash >> 2] >> ((hash & 0b11) << 1)) & 0b11;
         let ret = if f != 0 {
@@ -110,6 +114,7 @@ impl HashTab {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct SlideDict<F: Fn(LzssCode, LzssCode) -> Ordering> {
     comparison: F,
     buf: CircularBuffer<u8>,
@@ -123,7 +128,7 @@ pub(crate) struct SlideDict<F: Fn(LzssCode, LzssCode) -> Ordering> {
 impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
     const MATCH_SEARCH_COUNT: usize = 256;
 
-    pub fn new(
+    pub(crate) fn new(
         size_of_buf: usize,
         max_pos: usize,
         min_match: usize,
@@ -184,7 +189,7 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
         l
     }
 
-    pub fn append(&mut self, data: &[u8]) {
+    pub(crate) fn append(&mut self, data: &[u8]) {
         self.buf.append(data);
         let mm = self.min_match;
         self.append_buf.append(&mut data.to_vec());
@@ -208,7 +213,7 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
         }
     }
 
-    pub fn search_dic(
+    pub(crate) fn search_dic(
         &mut self,
         offset: usize,
         mut max_match: usize,
@@ -255,7 +260,7 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
                 pos_count -= 1;
             }
 
-            pos += self.pos[pos_offset + pos as usize];
+            pos += self.pos[pos_offset + pos];
         }
         info
     }

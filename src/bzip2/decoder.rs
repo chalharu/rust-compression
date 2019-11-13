@@ -5,20 +5,24 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use crate::bitio::direction::left::Left;
+use crate::bitio::reader::{BitRead, BitReader};
+use crate::bitset::BitArray;
+use crate::bzip2::error::BZip2Error;
+use crate::bzip2::mtf::MtfPositionDecoder;
+use crate::bzip2::{HEADER_h, BZ_G_SIZE, HEADER_0, HEADER_B, HEADER_Z};
+use crate::core::hash::{BuildHasher, Hasher};
+use crate::crc32::{BuiltinDigest, IEEE_NORMAL};
+use crate::huffman::decoder::HuffmanDecoder;
+use crate::traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::direction::left::Left;
-use bitio::reader::{BitRead, BitReader};
-use bitset::BitArray;
-use bzip2::error::BZip2Error;
-use bzip2::mtf::MtfPositionDecoder;
-use bzip2::{HEADER_h, BZ_G_SIZE, HEADER_0, HEADER_B, HEADER_Z};
-use core::hash::{BuildHasher, Hasher};
-use crc32::{BuiltinDigest, IEEE_NORMAL};
-use huffman::decoder::HuffmanDecoder;
-use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
+use log::debug;
 
 const BZ2_R_NUMS: [usize; 512] = [
     619, 720, 127, 481, 931, 816, 813, 233, 566, 247, 985, 724, 205, 454, 863,
@@ -58,22 +62,23 @@ const BZ2_R_NUMS: [usize; 512] = [
     936, 638,
 ];
 
+#[derive(Debug)]
 struct BlockRandomise {
     n2go: usize,
     t_pos: usize,
 }
 
 impl BlockRandomise {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { n2go: 0, t_pos: 0 }
     }
 
-    pub fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.n2go = 0;
         self.t_pos = 0;
     }
 
-    pub fn next(&mut self) -> bool {
+    pub(crate) fn next(&mut self) -> bool {
         if self.n2go == 0 {
             self.n2go = BZ2_R_NUMS[self.t_pos];
             self.t_pos += 1;
@@ -86,7 +91,8 @@ impl BlockRandomise {
     }
 }
 
-pub struct BZip2DecoderBase {
+#[derive(Debug)]
+pub(crate) struct BZip2DecoderBase {
     block_no: usize,
     block_size_100k: usize,
     combined_crc: u32,
@@ -113,7 +119,7 @@ impl BZip2DecoderBase {
     const RUN_A: u16 = 0;
     const RUN_B: u16 = 1;
 
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             block_no: 0,
             block_size_100k: 0,
@@ -166,11 +172,11 @@ impl BZip2DecoderBase {
                 } else {
                     BZip2Error::DataErrorMagic
                 };
-                Self::check_u8(reader, iter, HEADER_B)
+                let _ = Self::check_u8(reader, iter, HEADER_B)
                     .map_err(|_| magic_err)?;
-                Self::check_u8(reader, iter, HEADER_Z)
+                let _ = Self::check_u8(reader, iter, HEADER_Z)
                     .map_err(|_| magic_err)?;
-                Self::check_u8(reader, iter, HEADER_h)
+                let _ = Self::check_u8(reader, iter, HEADER_h)
                     .map_err(|_| magic_err)?;
                 self.block_size_100k = {
                     let b = Self::read_u8(reader, iter)
@@ -199,19 +205,19 @@ impl BZip2DecoderBase {
                 .map_err(|_| BZip2Error::UnexpectedEof)?;
 
             if block_head_byte == 0x31 {
-                Self::check_u8(reader, iter, 0x41)
+                let _ = Self::check_u8(reader, iter, 0x41)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, iter, 0x59)
+                let _ = Self::check_u8(reader, iter, 0x59)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, iter, 0x26)
+                let _ = Self::check_u8(reader, iter, 0x26)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, iter, 0x53)
+                let _ = Self::check_u8(reader, iter, 0x53)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, iter, 0x59)
+                let _ = Self::check_u8(reader, iter, 0x59)
                     .map_err(|_| BZip2Error::DataError)?;
                 self.block_no += 1;
                 debug!("    [{}: huff+mtf ", self.block_no);
@@ -478,19 +484,19 @@ impl BZip2DecoderBase {
 
                 return Ok(true);
             } else if block_head_byte == 0x17 {
-                Self::check_u8(reader, iter, 0x72)
+                let _ = Self::check_u8(reader, iter, 0x72)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, iter, 0x45)
+                let _ = Self::check_u8(reader, iter, 0x45)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, iter, 0x38)
+                let _ = Self::check_u8(reader, iter, 0x38)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, iter, 0x50)
+                let _ = Self::check_u8(reader, iter, 0x50)
                     .map_err(|_| BZip2Error::DataError)?;
 
-                Self::check_u8(reader, iter, 0x90)
+                let _ = Self::check_u8(reader, iter, 0x90)
                     .map_err(|_| BZip2Error::DataError)?;
                 let stored_combind_crc = Self::read_u32(reader, iter)
                     .map_err(|_| BZip2Error::UnexpectedEof)?;
@@ -501,7 +507,7 @@ impl BZip2DecoderBase {
                 if stored_combind_crc != self.combined_crc {
                     return Err(BZip2Error::DataError);
                 }
-                reader.skip_to_next_byte();
+                let _ = reader.skip_to_next_byte();
                 let next = reader
                     .peek_bits::<usize, _>(8, iter)
                     .map_err(|_| BZip2Error::Unexpected)?;
@@ -574,6 +580,7 @@ impl BitDecodeService for BZip2DecoderBase {
     }
 }
 
+#[derive(Debug)]
 pub struct BZip2Decoder {
     inner: BitDecoderImpl<BZip2DecoderBase>,
 }

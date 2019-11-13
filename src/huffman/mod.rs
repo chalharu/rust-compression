@@ -6,15 +6,18 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(any(feature = "bzip2", feature = "deflate", feature = "lzhuf"))]
 
-pub mod cano_huff_table;
-pub mod decoder;
-pub mod encoder;
+pub(crate) mod cano_huff_table;
+pub(crate) mod decoder;
+pub(crate) mod encoder;
 
+use crate::bitio::small_bit_vec::{SmallBitVec, SmallBitVecReverse};
+use crate::bucket_sort::BucketSort;
+use crate::core::ops::{Add, Shl};
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::small_bit_vec::{SmallBitVec, SmallBitVecReverse};
-use bucket_sort::BucketSort;
-use core::ops::{Add, Shl};
 
 fn create_huffman_table<
     T: PartialOrd<T> + Shl<u8, Output = T> + Clone + From<u8> + Add<Output = T>,
@@ -56,7 +59,7 @@ where
                 *c = s + 1;
                 Some(r)
             })
-            .flat_map(move |v| v)
+            .flatten()
             .collect::<Vec<_>>()
     } else {
         Vec::new()
@@ -65,16 +68,19 @@ where
 
 #[cfg(test)]
 mod tests {
-    use action::Action;
+    use crate::action::Action;
+    use crate::bitio::direction::left::Left;
+    use crate::bitio::direction::right::Right;
+    use crate::bitio::direction::Direction;
+    use crate::bitio::reader::BitReader;
+    use crate::bitio::writer::{BitWriteExt, BitWriter};
+    use crate::huffman::decoder::HuffmanDecoder;
+    use crate::huffman::encoder::HuffmanEncoder;
+    #[cfg(not(feature = "std"))]
+    #[allow(unused_imports)]
+    use alloc::vec;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use bitio::direction::left::Left;
-    use bitio::direction::right::Right;
-    use bitio::direction::Direction;
-    use bitio::reader::BitReader;
-    use bitio::writer::{BitWriteExt, BitWriter};
-    use huffman::decoder::HuffmanDecoder;
-    use huffman::encoder::HuffmanEncoder;
 
     fn enc_and_dec_checker<D: Direction>(
         symb_len: &[u8],
@@ -143,5 +149,4 @@ mod tests {
 
         enc_and_dec_checker::<Right>(&symb_len, &test_array, 2);
     }
-
 }

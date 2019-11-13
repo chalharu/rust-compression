@@ -1,8 +1,11 @@
+use crate::core::ops::{Index, IndexMut};
 #[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
-use core::ops::{Index, IndexMut};
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 
-pub(crate) struct BucketBuilder<'a, T: 'a> {
+pub(crate) struct BucketBuilder<'a, T> {
     data: Box<[usize]>, // want to use RawVec but that is unstable
     array: &'a [T],     // want to use RawVec but that is unstable
     min: usize,
@@ -12,11 +15,11 @@ impl<'a, T: Copy> BucketBuilder<'a, T>
 where
     usize: From<T>,
 {
-    pub fn new(array: &'a [T], min: usize, max: usize) -> Self {
+    pub(crate) fn new(array: &'a [T], min: usize, max: usize) -> Self {
         let mut data = vec![0; max - min + 2].into_boxed_slice();
 
         for v in array {
-            let v = usize::from(*v) as usize;
+            let v = usize::from(*v);
             if v > max {
                 panic!("out of range: max");
             }
@@ -35,7 +38,7 @@ where
         Self { array, data, min }
     }
 
-    pub fn build(&self, has_end: bool) -> Bucket<'a, T> {
+    pub(crate) fn build(&self, has_end: bool) -> Bucket<'a, T> {
         let mut data = vec![0; self.data.len() - 1].into_boxed_slice();
         if has_end {
             for d in self.data.iter().skip(1).zip(data.iter_mut()) {
@@ -50,19 +53,19 @@ where
     }
 }
 
-pub(crate) struct Bucket<'a, T: 'a> {
+pub(crate) struct Bucket<'a, T> {
     data: Box<[usize]>, // want to use RawVec but that is unstable
     array: &'a [T],     // want to use RawVec but that is unstable
     min: usize,
 }
 
 impl<'a, T> Bucket<'a, T> {
-    pub fn new(array: &'a [T], data: Box<[usize]>, min: usize) -> Self {
+    pub(crate) fn new(array: &'a [T], data: Box<[usize]>, min: usize) -> Self {
         Self { array, data, min }
     }
 }
 
-impl<'a, T: Copy> Index<usize> for Bucket<'a, T>
+impl<T: Copy> Index<usize> for Bucket<'_, T>
 where
     usize: From<T>,
 {
@@ -72,7 +75,7 @@ where
     }
 }
 
-impl<'a, T: Copy> IndexMut<usize> for Bucket<'a, T>
+impl<T: Copy> IndexMut<usize> for Bucket<'_, T>
 where
     usize: From<T>,
 {

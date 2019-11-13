@@ -6,9 +6,9 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "bzip2")]
 
-pub mod decoder;
-pub mod encoder;
-pub mod error;
+pub(crate) mod decoder;
+pub(crate) mod encoder;
+pub(crate) mod error;
 mod mtf;
 
 const HEADER_B: u8 = 0x42;
@@ -21,14 +21,18 @@ const BZ_G_SIZE: usize = 50;
 
 #[cfg(test)]
 mod tests {
-    use action::Action;
+    use crate::action::Action;
+    use crate::bzip2::decoder::BZip2Decoder;
+    use crate::bzip2::encoder::BZip2Encoder;
+    use crate::traits::decoder::DecodeExt;
+    use crate::traits::encoder::EncodeExt;
+    #[cfg(not(feature = "std"))]
+    #[allow(unused_imports)]
+    use alloc::vec;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use bzip2::decoder::BZip2Decoder;
-    use bzip2::encoder::BZip2Encoder;
+    use log::debug;
     use simple_logger;
-    use traits::decoder::DecodeExt;
-    use traits::encoder::EncodeExt;
 
     fn setup() {
         let _ = simple_logger::init();

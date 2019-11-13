@@ -6,9 +6,10 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "zlib")]
 
-use core::hash::Hasher;
+use crate::core::hash::Hasher;
 
-pub struct Adler32 {
+#[derive(Debug)]
+pub(crate) struct Adler32 {
     a: u32,
     b: u32,
     t: u16,
@@ -24,7 +25,7 @@ impl Adler32 {
     const LOOP_SIZE: u16 = 5549;
     const MOD_ADLER: u32 = 0xFFF1;
 
-    pub fn new() -> Adler32 {
+    pub(crate) fn new() -> Adler32 {
         Self {
             a: 1,
             b: 0,
@@ -36,7 +37,7 @@ impl Adler32 {
 impl Hasher for Adler32 {
     fn write_u8(&mut self, byte: u8) {
         let byte = u32::from(byte);
-        self.a += byte;;
+        self.a += byte;
         self.b += self.a;
         if self.t == 0 {
             self.t = Self::LOOP_SIZE;

@@ -6,6 +6,9 @@
 //! <http://mozilla.org/MPL/2.0/>.
 
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 fn down_heap(buf: &mut [usize], mut n: usize, len: usize) {
@@ -192,7 +195,7 @@ fn gen_code<F: Fn(usize, usize) -> usize>(
     }
 }
 
-pub fn make_tab_with_fn<F: Fn(usize, usize) -> usize>(
+pub(crate) fn make_tab_with_fn<F: Fn(usize, usize) -> usize>(
     freq: &[usize],
     lim: usize,
     weight_add_fn: F,
@@ -215,21 +218,21 @@ pub fn make_tab_with_fn<F: Fn(usize, usize) -> usize>(
                     *c = s + 1;
                     Some(r)
                 })
-                .flat_map(move |v| v)
+                .flatten()
                 .collect()
         }
     }
 }
 
 #[cfg(any(feature = "deflate", feature = "lzhuf", test))]
-pub fn make_table(freq: &[usize], lim: usize) -> Vec<u8> {
+pub(crate) fn make_table(freq: &[usize], lim: usize) -> Vec<u8> {
     make_tab_with_fn(freq, lim, |x, y| x + y)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::cmp;
+    use crate::core::cmp;
 
     #[test]
     fn create_haffman_tab() {

@@ -5,15 +5,15 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use action::Action;
-use core::borrow::BorrowMut;
-use core::hash::{BuildHasher, Hasher};
-use core::marker::PhantomData;
-use core::mem;
-use crc32::{BuiltinDigest, IEEE_REVERSE};
-use deflate::encoder::Inflater;
-use error::CompressionError;
-use traits::encoder::Encoder;
+use crate::action::Action;
+use crate::core::borrow::BorrowMut;
+use crate::core::hash::{BuildHasher, Hasher};
+use crate::core::marker::PhantomData;
+use crate::core::mem;
+use crate::crc32::{BuiltinDigest, IEEE_REVERSE};
+use crate::deflate::encoder::Inflater;
+use crate::error::CompressionError;
+use crate::traits::encoder::Encoder;
 
 struct ScanIterator<I: Iterator, BI: BorrowMut<I>, F: FnMut(&I::Item) -> ()> {
     phantom: PhantomData<I>,
@@ -37,7 +37,7 @@ impl<I: Iterator, BI: BorrowMut<I>, F: FnMut(&I::Item) -> ()> Iterator
 impl<I: Iterator, BI: BorrowMut<I>, F: FnMut(&I::Item) -> ()>
     ScanIterator<I, BI, F>
 {
-    pub fn new(inner: BI, closure: F) -> Self {
+    pub(crate) fn new(inner: BI, closure: F) -> Self {
         Self {
             inner,
             closure,
@@ -46,6 +46,7 @@ impl<I: Iterator, BI: BorrowMut<I>, F: FnMut(&I::Item) -> ()>
     }
 }
 
+#[derive(Debug)]
 pub struct GZipEncoder {
     inflater: Inflater,
     crc32: Option<BuiltinDigest>,
@@ -120,7 +121,7 @@ impl Encoder for GZipEncoder {
                 action,
             );
             self.i_size = i_size;
-            mem::replace(&mut self.crc32, crc32);
+            let _ = mem::replace(&mut self.crc32, crc32);
             if ret.is_none() {
                 let hash = self.crc32.as_mut().unwrap().finish() as u32;
                 let ret = hash as u8;
@@ -136,9 +137,12 @@ impl Encoder for GZipEncoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::encoder::EncodeExt;
+    #[cfg(not(feature = "std"))]
+    #[allow(unused_imports)]
+    use alloc::vec;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use traits::encoder::EncodeExt;
 
     #[test]
     fn test_unit() {

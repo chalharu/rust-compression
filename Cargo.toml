@@ -8,6 +8,7 @@ license = "MPL-2.0"
 readme = "README.md"
 description = "Compression libraries implemented by pure Rust."
 documentation = "https://docs.rs/rust-compression/"
+edition = '2018'
 
 [lib]
 name = "compression"
