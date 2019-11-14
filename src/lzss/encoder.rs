@@ -168,12 +168,12 @@ where
                 }
                 _ => self.lzss_queue.push_back(LzssCode::Reference {
                     len: lazy_index,
-                    pos: info.pos as usize - 1,
+                    pos: info.pos as usize,
                 }),
             }
             self.lzss_queue.push_back(LzssCode::Reference {
                 len: out_info.len,
-                pos: out_info.pos as usize - 1,
+                pos: out_info.pos as usize,
             });
             self.offset -= out_info.len + lazy_index;
         } else {
@@ -556,5 +556,44 @@ mod tests {
                 LzssCode::Reference { len: 256, pos: 255 },
             ]
         );
+    }
+
+    #[test]
+    fn test_11() {
+        let mut source = b"abc".to_vec();
+        source.append(
+            &mut b"d"
+                .iter()
+                .cycle()
+                .take(0x1_0000 - 3)
+                .cloned()
+                .collect::<Vec<u8>>(),
+        );
+        source.append(&mut b"abc".to_vec());
+        let mut encoder = LzssEncoder::new(comparison, 0x1_0000, 256, 3, 3);
+        let mut iter = source.into_iter();
+
+        let ret = (0..)
+            .scan((), |_, _| encoder.next(&mut iter, Action::Flush))
+            .map(Result::unwrap)
+            .collect::<Vec<_>>();
+        let mut result = vec![
+            LzssCode::Symbol(b'a'),
+            LzssCode::Symbol(b'b'),
+            LzssCode::Symbol(b'c'),
+            LzssCode::Symbol(b'd'),
+        ];
+        result.append(
+            &mut [LzssCode::Reference { len: 256, pos: 0 }]
+                .iter()
+                .cycle()
+                .take(255)
+                .cloned()
+                .collect::<Vec<_>>(),
+        );
+        result.push(LzssCode::Reference { len: 252, pos: 0 });
+        result.push(LzssCode::Reference { len: 3, pos: 65535 });
+
+        assert_eq!(ret, result);
     }
 }

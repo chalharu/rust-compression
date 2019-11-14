@@ -233,9 +233,10 @@ impl<F: Fn(LzssCode, LzssCode) -> Ordering> SlideDict<F> {
 
         while pos <= self.max_pos && pos_count > 0 {
             let nlen = self.check_match(offset, offset + pos, max_match);
+            // debug_assert!(pos > 65536, "position overflow");
             let new_info = MatchInfo {
                 len: nlen,
-                pos: pos as u16,
+                pos: (pos - 1) as u16,
             };
 
             info = info

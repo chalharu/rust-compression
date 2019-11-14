@@ -149,9 +149,16 @@ mod tests {
 
     #[test]
     fn test_multiblocks9() {
-        check(
-            include_bytes!("../../data/sample5.ref"),
-        );
+        check(include_bytes!("../../data/sample5.ref"));
     }
 
+    #[test]
+    fn test_multiblocks10() {
+        check(include_bytes!("../../data/sample6.ref"));
+    }
+
+    #[test]
+    fn test_multiblocks11() {
+        check(include_bytes!("../../data/sample7.ref"));
+    }
 }
