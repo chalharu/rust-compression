@@ -146,4 +146,12 @@ mod tests {
     fn test_multiblocks5() {
         test_rand_with_len(0x10_0001);
     }
+
+    #[test]
+    fn test_multiblocks9() {
+        check(
+            include_bytes!("../../data/sample5.ref"),
+        );
+    }
+
 }
