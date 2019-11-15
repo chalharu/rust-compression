@@ -31,7 +31,6 @@ compression = "0.1"
 ### Examples
 
 ```rust
-extern crate compression;
 use compression::prelude::*;
 
 fn main() {

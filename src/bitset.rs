@@ -6,16 +6,19 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "bzip2")]
 
+use crate::core::borrow::Borrow;
+use crate::core::fmt::{Debug, Formatter, Result};
+use crate::core::iter::{FromIterator, IntoIterator, Iterator};
+use crate::core::ops::Index;
 #[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use core::borrow::Borrow;
-use core::fmt::{Debug, Formatter, Result};
-use core::iter::{FromIterator, IntoIterator, Iterator};
-use core::ops::Index;
 
-pub struct BitArray {
+pub(crate) struct BitArray {
     data: Box<[u64]>, // want to use RawVec but that is unstable
     len: usize,
 }
@@ -29,18 +32,18 @@ impl Index<usize> for BitArray {
 }
 
 impl BitArray {
-    pub fn new(len: usize) -> Self {
+    pub(crate) fn new(len: usize) -> Self {
         Self {
             data: vec![0_u64; (len + 63) >> 6].into_boxed_slice(),
             len,
         }
     }
 
-    pub fn get(&self, idx: usize) -> bool {
+    pub(crate) fn get(&self, idx: usize) -> bool {
         (self.data[idx >> 6] & (1 << ((idx & 63) as u64))) != 0
     }
 
-    pub fn set(&mut self, idx: usize, value: bool) {
+    pub(crate) fn set(&mut self, idx: usize, value: bool) {
         let v = 1 << ((idx & 63) as u8);
         if value {
             self.data[idx >> 6] |= v;
@@ -49,18 +52,18 @@ impl BitArray {
         }
     }
 
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.len
     }
 
-    pub fn set_all(&mut self, value: bool) {
+    pub(crate) fn set_all(&mut self, value: bool) {
         let writeval = if value { 0xFFFF_FFFF } else { 0 };
         for d in self.data.as_mut().iter_mut() {
             *d = writeval;
         }
     }
 
-    pub fn iter(&self) -> BitArrayIter<&Self> {
+    pub(crate) fn iter(&self) -> BitArrayIter<&Self> {
         BitArrayIter {
             array: self,
             pos: 0,
@@ -69,7 +72,7 @@ impl BitArray {
         }
     }
 
-    pub fn u16_iter(&self) -> BitArrayU16Iter {
+    pub(crate) fn u16_iter(&self) -> BitArrayU16Iter<'_> {
         BitArrayU16Iter {
             array: self,
             pos: 0,
@@ -125,7 +128,7 @@ impl IntoIterator for BitArray {
     }
 }
 
-pub struct BitArrayIter<A: Borrow<BitArray>> {
+pub(crate) struct BitArrayIter<A: Borrow<BitArray>> {
     array: A,
     pos: usize,
     len: usize,
@@ -168,19 +171,19 @@ impl<A: Borrow<BitArray>> Iterator for BitArrayIter<A> {
 }
 
 impl Debug for BitArray {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
 
-pub struct BitArrayU16Iter<'a> {
+pub(crate) struct BitArrayU16Iter<'a> {
     array: &'a BitArray,
     pos: usize,
     len: usize,
     data: u64,
 }
 
-impl<'a> Iterator for BitArrayU16Iter<'a> {
+impl Iterator for BitArrayU16Iter<'_> {
     type Item = u16;
     fn next(&mut self) -> Option<u16> {
         if self.pos < self.len {

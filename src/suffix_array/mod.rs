@@ -8,4 +8,4 @@
 
 mod bucket;
 mod ls_type;
-pub mod sais;
+pub(crate) mod sais;

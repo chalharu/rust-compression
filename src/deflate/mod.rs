@@ -6,13 +6,16 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "deflate")]
 
-pub mod decoder;
-pub mod encoder;
+pub(crate) mod decoder;
+pub(crate) mod encoder;
 
+use crate::bitio::small_bit_vec::SmallBitVec;
+use crate::core::u16;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::small_bit_vec::SmallBitVec;
-use core::u16;
 
 fn fix_symbol_table() -> Vec<u8> {
     let mut r = vec![8; 144];
@@ -50,7 +53,7 @@ impl CodeTable {
     }
 
     fn convert_back(&self, pos: usize, ext: u16) -> u16 {
-        self.offsets[pos as usize] + ext
+        self.offsets[pos] + ext
     }
 }
 
@@ -124,16 +127,15 @@ fn gen_off_tab() -> CodeTable {
 
 #[cfg(test)]
 mod tests {
-    use action::Action;
+    use crate::action::Action;
+    use crate::deflate::decoder::Deflater;
+    use crate::deflate::encoder::Inflater;
+    use crate::traits::decoder::DecodeExt;
+    use crate::traits::encoder::EncodeExt;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use deflate::decoder::Deflater;
-    use deflate::encoder::Inflater;
     use rand::distributions::Standard;
-    use rand::{Rng, SeedableRng};
-    use rand_xorshift::XorShiftRng;
-    use traits::decoder::DecodeExt;
-    use traits::encoder::EncodeExt;
+    use rand::{thread_rng, Rng};
 
     fn check(testarray: &[u8]) {
         let encoded = testarray
@@ -187,30 +189,21 @@ mod tests {
 
     #[test]
     fn test_multiblocks() {
-        let mut rng = XorShiftRng::from_seed([
-            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
-            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
-        ]);
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
     fn test_multiblocks2() {
-        let mut rng = XorShiftRng::from_seed([
-            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
-            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
-        ]);
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
     fn test_multiblocks3() {
-        let mut rng = XorShiftRng::from_seed([
-            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
-            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
-        ]);
+        let rng = thread_rng();
 
         check(
             &(rng
@@ -221,10 +214,7 @@ mod tests {
     }
 
     fn test_rand_with_len(len: usize) {
-        let mut rng = XorShiftRng::from_seed([
-            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
-            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
-        ]);
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(len).collect::<Vec<_>>()));
     }

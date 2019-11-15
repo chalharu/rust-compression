@@ -5,25 +5,28 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use action::Action;
+use crate::action::Action;
+use crate::bitio::direction::left::Left;
+use crate::bitio::direction::Direction;
+use crate::bitio::small_bit_vec::SmallBitVec;
+use crate::bitio::writer::BitWriter;
+use crate::core::cmp::{self, Ordering};
+use crate::error::CompressionError;
+use crate::huffman::cano_huff_table::make_table;
+use crate::huffman::encoder::HuffmanEncoder;
+use crate::lzhuf::{LzhufMethod, LZSS_MIN_MATCH};
+use crate::lzss::encoder::LzssEncoder;
+use crate::lzss::LzssCode;
+use crate::traits::encoder::Encoder;
 #[cfg(not(feature = "std"))]
 use alloc::collections::vec_deque::VecDeque;
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::direction::left::Left;
-use bitio::direction::Direction;
-use bitio::small_bit_vec::SmallBitVec;
-use bitio::writer::BitWriter;
-use core::cmp::{self, Ordering};
-use error::CompressionError;
-use huffman::cano_huff_table::make_table;
-use huffman::encoder::HuffmanEncoder;
-use lzhuf::{LzhufMethod, LZSS_MIN_MATCH};
-use lzss::encoder::LzssEncoder;
-use lzss::LzssCode;
 #[cfg(feature = "std")]
 use std::collections::vec_deque::VecDeque;
-use traits::encoder::Encoder;
 
 fn lzss_comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
     match (lhs, rhs) {
@@ -49,7 +52,7 @@ enum LzhufHuffmanEncoder {
 }
 
 impl LzhufHuffmanEncoder {
-    pub fn new(symb_len: &[u8]) -> Self {
+    pub(crate) fn new(symb_len: &[u8]) -> Self {
         let symbs = symb_len
             .iter()
             .enumerate()
@@ -62,7 +65,7 @@ impl LzhufHuffmanEncoder {
         }
     }
 
-    pub fn enc(
+    pub(crate) fn enc(
         &mut self,
         data: u16,
     ) -> Result<Option<SmallBitVec<u16>>, CompressionError> {
@@ -88,7 +91,7 @@ enum LzhufLzssCode {
     },
 }
 
-impl<'a> From<&'a LzssCode> for LzhufLzssCode {
+impl From<&LzssCode> for LzhufLzssCode {
     fn from(data: &LzssCode) -> Self {
         match *data {
             LzssCode::Symbol(s) => LzhufLzssCode::Symbol(s),
@@ -104,6 +107,7 @@ impl<'a> From<&'a LzssCode> for LzhufLzssCode {
     }
 }
 
+#[derive(Debug)]
 pub struct LzhufEncoder {
     inner: LzhufEncoderInner,
     lzss: LzssEncoder<fn(LzssCode, LzssCode) -> Ordering>,
@@ -235,6 +239,7 @@ impl Encoder for LzhufEncoder {
     }
 }
 
+#[derive(Debug)]
 struct LzhufEncoderInner {
     max_block_len: usize,
     offset_tab_len: usize,
@@ -257,7 +262,7 @@ impl LzhufEncoderInner {
         self.offset_freq = vec![0; self.size_of_offset_freq_buf];
     }
 
-    pub fn new(
+    pub(crate) fn new(
         max_block_len: usize,
         offset_tab_len: usize,
         max_match: usize,
@@ -567,9 +572,9 @@ impl LzhufEncoderInner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use action::Action;
-    use bitio::writer::BitWriteExt;
-    use traits::encoder::EncodeExt;
+    use crate::action::Action;
+    use crate::bitio::writer::BitWriteExt;
+    use crate::traits::encoder::EncodeExt;
 
     #[test]
     fn test_arr() {
@@ -662,7 +667,7 @@ mod tests {
             .iter()
             .cycle()
             .take(260)
-            .map(|&x| x as u8)
+            .cloned()
             .encode(&mut encoder, Action::Finish)
             .collect::<Result<Vec<_>, _>>();
 

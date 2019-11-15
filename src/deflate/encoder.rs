@@ -5,28 +5,31 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use action::Action;
+use crate::action::Action;
+use crate::bitio::direction::right::Right;
+use crate::bitio::direction::Direction;
+use crate::bitio::small_bit_vec::SmallBitVec;
+use crate::bitio::writer::BitWriter;
+use crate::cbuffer::CircularBuffer;
+use crate::core::cmp::{self, Ordering};
+use crate::deflate::{
+    fix_offset_table, fix_symbol_table, gen_len_tab, gen_off_tab, CodeTable,
+};
+use crate::error::CompressionError;
+use crate::huffman::cano_huff_table::make_table;
+use crate::huffman::encoder::HuffmanEncoder;
+use crate::lzss::encoder::LzssEncoder;
+use crate::lzss::LzssCode;
+use crate::traits::encoder::Encoder;
 #[cfg(not(feature = "std"))]
 use alloc::collections::vec_deque::VecDeque;
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::direction::right::Right;
-use bitio::direction::Direction;
-use bitio::small_bit_vec::SmallBitVec;
-use bitio::writer::BitWriter;
-use cbuffer::CircularBuffer;
-use core::cmp::{self, Ordering};
-use deflate::{
-    fix_offset_table, fix_symbol_table, gen_len_tab, gen_off_tab, CodeTable,
-};
-use error::CompressionError;
-use huffman::cano_huff_table::make_table;
-use huffman::encoder::HuffmanEncoder;
-use lzss::encoder::LzssEncoder;
-use lzss::LzssCode;
 #[cfg(feature = "std")]
 use std::collections::vec_deque::VecDeque;
-use traits::encoder::Encoder;
 
 fn lzss_comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
     match (lhs, rhs) {
@@ -58,7 +61,7 @@ enum DeflateLzssCode {
 }
 
 impl DeflateLzssCode {
-    pub fn from_with_codetab(
+    pub(crate) fn from_with_codetab(
         source: &LzssCode,
         len_tab: &CodeTable,
         offset_tab: &CodeTable,
@@ -80,12 +83,13 @@ impl DeflateLzssCode {
 }
 
 #[derive(Debug)]
-pub enum InflateBitVec {
+pub(crate) enum InflateBitVec {
     BitVec(SmallBitVec<u16>),
     Byte(u8),
     Flush,
 }
 
+#[derive(Debug)]
 pub struct Inflater {
     inner: InflaterInner,
     lzss: LzssEncoder<fn(LzssCode, LzssCode) -> Ordering>,
@@ -246,6 +250,7 @@ impl Encoder for Inflater {
     }
 }
 
+#[derive(Debug)]
 struct InflaterInner {
     len_tab: CodeTable,
     offset_tab: CodeTable,
@@ -270,7 +275,7 @@ impl InflaterInner {
         self.symbol_freq[256] = 1;
     }
 
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let mut symbol_freq = vec![0; Self::SIZE_OF_SYMBOL_FREQ_BUF];
         symbol_freq[256] = 1;
         Self {
@@ -285,7 +290,7 @@ impl InflaterInner {
         }
     }
 
-    pub fn with_dict(dict: &[u8]) -> Self {
+    pub(crate) fn with_dict(dict: &[u8]) -> Self {
         let mut symbol_freq = vec![0; Self::SIZE_OF_SYMBOL_FREQ_BUF];
         symbol_freq[256] = 1;
         let mut nocomp_buf = CircularBuffer::new(Self::MAX_BLOCK_SIZE);
@@ -575,7 +580,7 @@ impl InflaterInner {
         queue: &mut VecDeque<InflateBitVec>,
     ) -> Result<(), CompressionError> {
         let next_len = if let LzssCode::Reference { len, .. } = *buf {
-            len as usize
+            len
         } else {
             1
         };
@@ -651,9 +656,12 @@ impl InflaterInner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use action::Action;
-    use bitio::writer::BitWriteExt;
-    use traits::encoder::EncodeExt;
+    use crate::action::Action;
+    use crate::bitio::writer::BitWriteExt;
+    use crate::traits::encoder::EncodeExt;
+    #[cfg(not(feature = "std"))]
+    #[allow(unused_imports)]
+    use alloc::vec;
 
     #[test]
     fn test_empty() {

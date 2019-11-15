@@ -5,15 +5,14 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use cbuffer::CircularBuffer;
-use error::CompressionError;
-use lzss::LzssCode;
-use traits::decoder::Decoder;
+use crate::cbuffer::CircularBuffer;
+use crate::error::CompressionError;
+use crate::lzss::LzssCode;
+use crate::traits::decoder::Decoder;
 
 /// # Examples
 ///
 /// ```rust
-/// extern crate compression;
 /// use compression::prelude::*;
 /// use std::cmp::Ordering;
 ///
@@ -52,6 +51,7 @@ use traits::decoder::Decoder;
 ///         .unwrap();
 /// }
 /// ```
+#[derive(Debug)]
 pub struct LzssDecoder {
     buf: CircularBuffer<u8>,
     offset: usize,
@@ -107,12 +107,12 @@ impl Decoder for LzssDecoder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use action::Action;
+    use crate::action::Action;
+    use crate::lzss::encoder::LzssEncoder;
+    use crate::lzss::tests::comparison;
+    use crate::traits::encoder::Encoder;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use lzss::encoder::LzssEncoder;
-    use lzss::tests::comparison;
-    use traits::encoder::Encoder;
 
     #[test]
     fn test() {

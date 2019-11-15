@@ -1,5 +1,5 @@
-use core::fmt;
-use error::CompressionError;
+use crate::core::fmt;
+use crate::error::CompressionError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BZip2Error {
@@ -11,7 +11,7 @@ pub enum BZip2Error {
 }
 
 impl fmt::Display for BZip2Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.description_in())
     }
 }

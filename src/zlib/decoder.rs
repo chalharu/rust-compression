@@ -5,18 +5,21 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use adler32::Adler32;
+use crate::adler32::Adler32;
+use crate::bitio::direction::right::Right;
+use crate::bitio::reader::{BitRead, BitReader};
+use crate::core::hash::Hasher;
+use crate::deflate::decoder::DeflaterBase;
+use crate::error::CompressionError;
+use crate::traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::direction::right::Right;
-use bitio::reader::{BitRead, BitReader};
-use core::hash::Hasher;
-use deflate::decoder::DeflaterBase;
-use error::CompressionError;
-use traits::decoder::{BitDecodeService, BitDecoderImpl, Decoder};
 
-#[derive(Default)]
-pub struct ZlibDecoderBase {
+#[derive(Default, Debug)]
+pub(crate) struct ZlibDecoderBase {
     deflater: DeflaterBase,
     adler32: Adler32,
     dict_hash: Option<u32>,
@@ -106,7 +109,7 @@ impl BitDecodeService for ZlibDecoderBase {
                         return Ok(Some(s));
                     }
                     Ok(None) => {
-                        reader.skip_to_next_byte();
+                        let _ = reader.skip_to_next_byte();
                         let c = (0..4)
                             .map(|_| reader.read_bits::<u32, _>(8, iter))
                             .fold(
@@ -134,6 +137,7 @@ impl BitDecodeService for ZlibDecoderBase {
     }
 }
 
+#[derive(Debug)]
 pub struct ZlibDecoder {
     inner: BitDecoderImpl<ZlibDecoderBase>,
 }

@@ -5,34 +5,38 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use action::Action;
+use crate::action::Action;
+use crate::bitio::direction::left::Left;
+use crate::bitio::direction::Direction;
+use crate::bitio::small_bit_vec::SmallBitVec;
+use crate::bitio::writer::BitWriter;
+use crate::bitset::BitArray;
+use crate::bzip2::mtf::MtfPosition;
+use crate::bzip2::{HEADER_h, BZ_G_SIZE, HEADER_0, HEADER_B, HEADER_Z};
+use crate::core::cmp;
+use crate::core::fmt;
+use crate::core::hash::{BuildHasher, Hasher};
+use crate::core::u8;
+use crate::crc32::{BuiltinDigest, IEEE_NORMAL};
+use crate::error::CompressionError;
+use crate::huffman::cano_huff_table::make_tab_with_fn;
+use crate::huffman::encoder::HuffmanEncoder;
+use crate::suffix_array::sais::bwt;
+use crate::traits::encoder::Encoder;
 #[cfg(not(feature = "std"))]
 use alloc::collections::vec_deque::VecDeque;
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::direction::left::Left;
-use bitio::direction::Direction;
-use bitio::small_bit_vec::SmallBitVec;
-use bitio::writer::BitWriter;
-use bitset::BitArray;
-use bzip2::mtf::MtfPosition;
-use bzip2::{HEADER_h, BZ_G_SIZE, HEADER_0, HEADER_B, HEADER_Z};
-use core::cmp;
-use core::fmt;
-use core::hash::{BuildHasher, Hasher};
-use core::u8;
-use crc32::{BuiltinDigest, IEEE_NORMAL};
-use error::CompressionError;
-use huffman::cano_huff_table::make_tab_with_fn;
-use huffman::encoder::HuffmanEncoder;
-use log::Level;
+use log::{debug, log_enabled, Level};
 #[cfg(feature = "std")]
 use std::collections::vec_deque::VecDeque;
-use suffix_array::sais::bwt;
-use traits::encoder::Encoder;
 
+#[derive(Debug)]
 pub struct BZip2Encoder {
     inner: EncoderInner,
     writer: BitWriter<Left>,
@@ -154,6 +158,7 @@ impl Encoder for BZip2Encoder {
     }
 }
 
+#[derive(Debug)]
 struct EncoderInner {
     block_buf: Vec<u8>,
     finished: bool,
@@ -177,7 +182,7 @@ impl EncoderInner {
         self.in_use.set_all(false);
     }
 
-    pub fn new(level: usize) -> Self {
+    pub(crate) fn new(level: usize) -> Self {
         let block_max_len = level * 100_000 - 19;
         Self {
             block_buf: Vec::with_capacity(level * 100_000),

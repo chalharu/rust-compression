@@ -5,11 +5,13 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use crate::core::iter;
+use crate::core::ops::{Index, IndexMut};
+use crate::core::{ptr, usize};
 #[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
-use core::iter;
-use core::ops::{Index, IndexMut};
-use core::{ptr, usize};
+#[cfg(not(feature = "std"))]
+use alloc::vec;
 
 #[derive(Clone, Hash, Debug)]
 pub(crate) struct CircularBuffer<T> {
@@ -19,7 +21,7 @@ pub(crate) struct CircularBuffer<T> {
 }
 
 impl<T: Default + Clone> CircularBuffer<T> {
-    pub fn new(cap: usize) -> Self {
+    pub(crate) fn new(cap: usize) -> Self {
         Self {
             data: vec![T::default(); cap].into_boxed_slice(),
             pos: 0,
@@ -29,7 +31,7 @@ impl<T: Default + Clone> CircularBuffer<T> {
 }
 
 impl<T> CircularBuffer<T> {
-    pub fn append(&mut self, data: &[T]) {
+    pub(crate) fn append(&mut self, data: &[T]) {
         let len = self.data.len() - self.pos;
         let count = data.len();
 
@@ -65,7 +67,7 @@ impl<T> CircularBuffer<T> {
     }
 
     #[inline]
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         if self.is_first {
             self.pos
         } else {
@@ -74,12 +76,12 @@ impl<T> CircularBuffer<T> {
     }
 
     #[inline]
-    pub fn cap(&self) -> usize {
+    pub(crate) fn cap(&self) -> usize {
         self.data.len()
     }
 
     #[cfg(any(feature = "lzss", test))]
-    pub fn push(&mut self, data: T) {
+    pub(crate) fn push(&mut self, data: T) {
         self.data[self.pos] = data;
         self.pos += 1;
         if self.pos >= self.data.len() {
@@ -89,12 +91,12 @@ impl<T> CircularBuffer<T> {
     }
 
     #[inline]
-    pub fn get_raw_pos(&self) -> usize {
+    pub(crate) fn get_raw_pos(&self) -> usize {
         self.pos
     }
 
     #[inline]
-    pub fn get_raw_ref(&self) -> &[T] {
+    pub(crate) fn get_raw_ref(&self) -> &[T] {
         self.data.as_ref()
     }
 
@@ -134,7 +136,7 @@ impl<T: Clone> IntoIterator for CircularBuffer<T> {
     }
 }
 
-pub struct Iterator<T> {
+pub(crate) struct Iterator<T> {
     inner: CircularBuffer<T>,
     pos: usize,
     len: usize,

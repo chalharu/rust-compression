@@ -6,12 +6,13 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(any(feature = "deflate", test))]
 
-use bitio::direction::Direction;
-use core::mem::size_of;
-use core::ops::{Shl, Shr};
+use crate::bitio::direction::Direction;
+use crate::core::mem::size_of;
+use crate::core::ops::{Shl, Shr};
 use num_traits::Zero;
 
-pub struct Right;
+#[derive(Debug)]
+pub(crate) struct Right;
 
 impl Direction for Right {
     #[inline]

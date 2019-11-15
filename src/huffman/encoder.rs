@@ -5,20 +5,23 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use crate::bitio::direction::Direction;
+use crate::bitio::small_bit_vec::{SmallBitVec, SmallBitVecReverse};
+use crate::core::marker::PhantomData;
+use crate::core::ops::{Add, Shl};
+use crate::huffman::create_huffman_table;
 #[cfg(not(feature = "std"))]
 use alloc::borrow::ToOwned;
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use bitio::direction::Direction;
-use bitio::small_bit_vec::{SmallBitVec, SmallBitVecReverse};
-use core::marker::PhantomData;
-use core::ops::{Add, Shl};
-use huffman::create_huffman_table;
 use num_traits::{cast, NumCast};
 
-pub struct HuffmanEncoder<D: Direction, T> {
+pub(crate) struct HuffmanEncoder<D: Direction, T> {
     bit_vec_tab: Vec<Option<SmallBitVec<T>>>,
     phantom: PhantomData<fn() -> D>,
 }
@@ -29,14 +32,14 @@ where
     T: Clone + PartialOrd<T> + Shl<u8, Output = T> + Add<Output = T> + From<u8>,
     SmallBitVec<T>: SmallBitVecReverse,
 {
-    pub fn new(symb_len: &[u8]) -> Self {
+    pub(crate) fn new(symb_len: &[u8]) -> Self {
         Self {
             bit_vec_tab: create_huffman_table(symb_len, D::is_reverse()),
             phantom: PhantomData,
         }
     }
 
-    pub fn enc<U: NumCast + Clone>(
+    pub(crate) fn enc<U: NumCast + Clone>(
         &self,
         data: U,
     ) -> Result<SmallBitVec<T>, String> {
@@ -54,8 +57,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitio::direction::left::Left;
-    use bitio::direction::right::Right;
+    use crate::bitio::direction::left::Left;
+    use crate::bitio::direction::right::Right;
 
     #[test]
     fn lefthuffman_encode_new() {

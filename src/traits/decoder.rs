@@ -5,11 +5,12 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use bitio::direction::Direction;
-use bitio::reader::BitReader;
-use core::borrow::BorrowMut;
-use core::marker::PhantomData;
-use error::CompressionError;
+use crate::bitio::direction::Direction;
+use crate::bitio::reader::BitReader;
+use crate::core::borrow::BorrowMut;
+use crate::core::marker::PhantomData;
+use crate::error::CompressionError;
+use cfg_if::cfg_if;
 
 pub trait DecodeExt<I>
 where
@@ -18,7 +19,7 @@ where
     fn decode<D: Decoder<Input = I::Item>>(
         self,
         decoder: &mut D,
-    ) -> DecodeIterator<I, D, I>
+    ) -> DecodeIterator<'_, I, D, I>
     where
         CompressionError: From<D::Error>;
 }
@@ -30,7 +31,7 @@ where
     fn decode<D: Decoder<Input = I::Item>>(
         self,
         decoder: &mut D,
-    ) -> DecodeIterator<I::IntoIter, D, I::IntoIter>
+    ) -> DecodeIterator<'_, I::IntoIter, D, I::IntoIter>
     where
         CompressionError: From<D::Error>,
     {
@@ -41,10 +42,11 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct DecodeIterator<'a, I, D, B>
 where
     I: Iterator<Item = D::Input>,
-    D: Decoder + 'a,
+    D: Decoder,
     B: BorrowMut<I>,
     CompressionError: From<D::Error>,
 {
@@ -69,7 +71,7 @@ where
     }
 }
 
-impl<'a, I, D, B> Iterator for DecodeIterator<'a, I, D, B>
+impl<I, D, B> Iterator for DecodeIterator<'_, I, D, B>
 where
     I: Iterator<Item = D::Input>,
     D: Decoder,
@@ -98,7 +100,8 @@ where
 
 cfg_if! {
     if #[cfg(any(feature = "bzip2", feature="deflate", feature="lzhuf"))] {
-        pub struct BitDecoder<T, R, B>
+        #[derive(Debug)]
+        pub(crate) struct BitDecoder<T, R, B>
         where
             T: BitDecodeService,
             CompressionError: From<T::Error>,
@@ -113,13 +116,12 @@ cfg_if! {
         #[cfg(any(feature = "bzip2", feature="deflate"))]
         impl<T> BitDecoder<T, BitReader<T::Direction>, T>
         where
-            T: BitDecodeService,
+            T: BitDecodeService + Default,
             CompressionError: From<T::Error>,
-            T: Default,
             T::Direction: BorrowMut<T::Direction>,
             BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
         {
-            pub fn new() -> Self {
+            pub(crate) fn new() -> Self {
                 Self {
                     reader: BitReader::new(),
                     service: T::default(),
@@ -136,7 +138,7 @@ cfg_if! {
             R: BorrowMut<BitReader<T::Direction>>,
             B: BorrowMut<T>,
         {
-            pub fn with_service(service: B, reader: R) -> Self {
+            pub(crate) fn with_service(service: B, reader: R) -> Self {
                 Self {
                     reader,
                     service,
@@ -146,9 +148,8 @@ cfg_if! {
         }
         impl<T> Default for BitDecoder<T, BitReader<T::Direction>, T>
         where
-            T: BitDecodeService,
+            T: BitDecodeService + Default,
             CompressionError: From<T::Error>,
-            T: Default,
             T::Direction: BorrowMut<T::Direction>,
             BitReader<T::Direction>: BorrowMut<BitReader<T::Direction>>,
         {
@@ -198,12 +199,12 @@ cfg_if! {
             }
         }
 
-        pub type BitDecoderImpl<T> =
+        pub(crate) type BitDecoderImpl<T> =
             BitDecoder<T, BitReader<<T as BitDecodeService>::Direction>, T>;
     }
 }
 
-pub trait BitDecodeService
+pub(crate) trait BitDecodeService
 where
     Self::Direction: Direction,
     CompressionError: From<Self::Error>,

@@ -6,21 +6,20 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "zlib")]
 
-pub mod decoder;
-pub mod encoder;
+pub(crate) mod decoder;
+pub(crate) mod encoder;
 
 #[cfg(test)]
 mod tests {
-    use action::Action;
+    use crate::action::Action;
+    use crate::traits::decoder::DecodeExt;
+    use crate::traits::encoder::EncodeExt;
+    use crate::zlib::decoder::ZlibDecoder;
+    use crate::zlib::encoder::ZlibEncoder;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
     use rand::distributions::Standard;
-    use rand::{Rng, SeedableRng};
-    use rand_xorshift::XorShiftRng;
-    use traits::decoder::DecodeExt;
-    use traits::encoder::EncodeExt;
-    use zlib::decoder::ZlibDecoder;
-    use zlib::encoder::ZlibEncoder;
+    use rand::{thread_rng, Rng};
 
     fn check(testarray: &[u8]) {
         let encoded = testarray
@@ -63,30 +62,21 @@ mod tests {
 
     #[test]
     fn test_multiblocks() {
-        let mut rng = XorShiftRng::from_seed([
-            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
-            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
-        ]);
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
     fn test_multiblocks2() {
-        let mut rng = XorShiftRng::from_seed([
-            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
-            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
-        ]);
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
     fn test_multiblocks3() {
-        let mut rng = XorShiftRng::from_seed([
-            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
-            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
-        ]);
+        let rng = thread_rng();
 
         check(
             &(rng
@@ -97,10 +87,7 @@ mod tests {
     }
 
     fn test_rand_with_len(len: usize) {
-        let mut rng = XorShiftRng::from_seed([
-            0xDA, 0xE1, 0x4B, 0x0B, 0xFF, 0xC2, 0xFE, 0x64, 0x23, 0xFE, 0x3F,
-            0x51, 0x6D, 0x3E, 0xA2, 0xF3,
-        ]);
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(len).collect::<Vec<_>>()));
     }

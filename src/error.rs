@@ -5,7 +5,7 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use core::fmt;
+use crate::core::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionError {
@@ -15,7 +15,7 @@ pub enum CompressionError {
 }
 
 impl fmt::Display for CompressionError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.description_in())
     }
 }
