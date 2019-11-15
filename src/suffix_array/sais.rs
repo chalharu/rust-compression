@@ -1,10 +1,13 @@
+use crate::core::mem;
+use crate::core::slice;
+use crate::core::usize;
+use crate::suffix_array::bucket::BucketBuilder;
+use crate::suffix_array::ls_type::LSTypeArray;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use core::mem;
-use core::slice;
-use core::usize;
-use suffix_array::bucket::BucketBuilder;
-use suffix_array::ls_type::LSTypeArray;
 
 fn array_rotate_for_non_sentinel_bwt(
     array: &[u8],
@@ -71,7 +74,7 @@ fn fill<T>(array: &mut [usize], offset: usize, count: usize, value: usize) {
 }
 
 fn induce_sa<T: Copy>(
-    bucket_builder: &BucketBuilder<T>,
+    bucket_builder: &BucketBuilder<'_, T>,
     type_array: &LSTypeArray,
     suffix_array: &mut [usize],
     shift: usize,
@@ -260,7 +263,7 @@ fn sa_is<T: Copy + PartialEq<T> + PartialOrd<T>>(
     induce_sa(&bucket_builder, &type_array, suffix_array, shift);
 }
 
-pub fn bwt(array: &[u8], max_value: usize) -> Vec<usize> {
+pub(crate) fn bwt(array: &[u8], max_value: usize) -> Vec<usize> {
     let mut suffix_array = vec![0_usize; array.len()];
     let shift =
         array_rotate_for_non_sentinel_bwt(array, &mut suffix_array, max_value);
@@ -271,7 +274,7 @@ pub fn bwt(array: &[u8], max_value: usize) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::u8;
+    use crate::core::u8;
 
     fn test_bwt(src: &[u8], bwtstr: &[u8]) {
         let ret = bwt(src, u8::max_value() as usize);

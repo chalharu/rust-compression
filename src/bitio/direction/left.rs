@@ -6,12 +6,13 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(any(feature = "lzhuf", feature = "bzip2", test))]
 
-use bitio::direction::Direction;
-use core::mem::size_of;
-use core::ops::{Shl, Shr};
+use crate::bitio::direction::Direction;
+use crate::core::mem::size_of;
+use crate::core::ops::{Shl, Shr};
 use num_traits::Zero;
 
-pub struct Left;
+#[derive(Debug)]
+pub(crate) struct Left;
 
 impl Direction for Left {
     #[inline]

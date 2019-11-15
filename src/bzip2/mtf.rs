@@ -5,21 +5,21 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
+use crate::core::mem;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use core::mem;
 
 pub(crate) struct MtfPosition {
     data: Vec<usize>,
 }
 
 impl MtfPosition {
-    pub fn new(count: usize) -> Self {
+    pub(crate) fn new(count: usize) -> Self {
         Self {
             data: (0..count).collect::<Vec<_>>(),
         }
     }
-    pub fn pop(&mut self, value: usize) -> usize {
+    pub(crate) fn pop(&mut self, value: usize) -> usize {
         if value == self.data[0] {
             0
         } else {
@@ -43,12 +43,12 @@ pub(crate) struct MtfPositionDecoder {
 }
 
 impl MtfPositionDecoder {
-    pub fn new(count: usize) -> Self {
+    pub(crate) fn new(count: usize) -> Self {
         Self {
             data: (0..count).collect::<Vec<_>>(),
         }
     }
-    pub fn pop(&mut self, value: usize) -> usize {
+    pub(crate) fn pop(&mut self, value: usize) -> usize {
         if value == 0 {
             self.data[0]
         } else {

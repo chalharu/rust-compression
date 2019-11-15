@@ -6,8 +6,8 @@
 //! <http://mozilla.org/MPL/2.0/>.
 //!
 
-use action::Action;
-use error::CompressionError;
+use crate::action::Action;
+use crate::error::CompressionError;
 
 pub trait EncodeExt<I>
 where
@@ -17,7 +17,7 @@ where
         self,
         encoder: &mut E,
         action: Action,
-    ) -> EncodeIterator<I, E>
+    ) -> EncodeIterator<'_, I, E>
     where
         CompressionError: From<E::Error>;
 }
@@ -30,7 +30,7 @@ where
         self,
         encoder: &mut E,
         action: Action,
-    ) -> EncodeIterator<I::IntoIter, E>
+    ) -> EncodeIterator<'_, I::IntoIter, E>
     where
         CompressionError: From<E::Error>,
     {
@@ -38,10 +38,11 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct EncodeIterator<'a, I, E>
 where
     I: Iterator<Item = E::In>,
-    E: Encoder + 'a,
+    E: Encoder,
     CompressionError: From<E::Error>,
 {
     encoder: &'a mut E,
@@ -64,7 +65,7 @@ where
     }
 }
 
-impl<'a, I, E> Iterator for EncodeIterator<'a, I, E>
+impl<I, E> Iterator for EncodeIterator<'_, I, E>
 where
     I: Iterator<Item = E::In>,
     E: Encoder,

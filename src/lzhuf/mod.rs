@@ -6,11 +6,12 @@
 //! <http://mozilla.org/MPL/2.0/>.
 #![cfg(feature = "lzhuf")]
 
-pub mod decoder;
-pub mod encoder;
+pub(crate) mod decoder;
+pub(crate) mod encoder;
 
 const LZSS_MIN_MATCH: usize = 3;
 
+#[derive(Clone, Copy, Debug)]
 pub enum LzhufMethod {
     Lh4,
     Lh5,
@@ -19,8 +20,8 @@ pub enum LzhufMethod {
 }
 
 impl LzhufMethod {
-    fn dictionary_bits(&self) -> usize {
-        match *self {
+    fn dictionary_bits(self) -> usize {
+        match self {
             LzhufMethod::Lh4 => 12,
             LzhufMethod::Lh5 => 13,
             LzhufMethod::Lh6 => 15,
@@ -28,8 +29,8 @@ impl LzhufMethod {
         }
     }
 
-    fn offset_bits(&self) -> usize {
-        match *self {
+    fn offset_bits(self) -> usize {
+        match self {
             LzhufMethod::Lh4 | LzhufMethod::Lh5 => 4,
             LzhufMethod::Lh6 | LzhufMethod::Lh7 => 5,
         }
@@ -39,15 +40,15 @@ impl LzhufMethod {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use action::Action;
+    use crate::action::Action;
+    use crate::lzhuf::decoder::LzhufDecoder;
+    use crate::lzhuf::encoder::LzhufEncoder;
+    use crate::traits::decoder::DecodeExt;
+    use crate::traits::encoder::EncodeExt;
     #[cfg(not(feature = "std"))]
     use alloc::vec::Vec;
-    use lzhuf::decoder::LzhufDecoder;
-    use lzhuf::encoder::LzhufEncoder;
     use rand::distributions::Standard;
-    use rand::{Rng, thread_rng};
-    use traits::decoder::DecodeExt;
-    use traits::encoder::EncodeExt;
+    use rand::{thread_rng, Rng};
 
     fn check(testarray: &[u8]) {
         let method = LzhufMethod::Lh7;
@@ -91,21 +92,21 @@ mod tests {
 
     #[test]
     fn test_multiblocks1() {
-        let mut rng = thread_rng();
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
     fn test_multiblocks2() {
-        let mut rng = thread_rng();
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(323_742).collect::<Vec<_>>()));
     }
 
     #[test]
     fn test_multiblocks3() {
-        let mut rng = thread_rng();
+        let rng = thread_rng();
 
         check(
             &(rng
@@ -116,7 +117,7 @@ mod tests {
     }
 
     fn test_rand_with_len(len: usize) {
-        let mut rng = thread_rng();
+        let rng = thread_rng();
 
         check(&(rng.sample_iter(&Standard).take(len).collect::<Vec<_>>()));
     }
@@ -144,5 +145,20 @@ mod tests {
     #[test]
     fn test_multiblocks5() {
         test_rand_with_len(0x10_0001);
+    }
+
+    #[test]
+    fn test_multiblocks9() {
+        check(include_bytes!("../../data/sample5.ref"));
+    }
+
+    #[test]
+    fn test_multiblocks10() {
+        check(include_bytes!("../../data/sample6.ref"));
+    }
+
+    #[test]
+    fn test_multiblocks11() {
+        check(include_bytes!("../../data/sample7.ref"));
     }
 }

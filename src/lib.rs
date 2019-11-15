@@ -11,7 +11,6 @@
 //! # Examples
 //!
 //! ```rust
-//! extern crate compression;
 //! use compression::prelude::*;
 //!
 //! fn main() {
@@ -36,29 +35,15 @@
 #![crate_type = "lib"]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[macro_use]
-extern crate cfg_if;
-extern crate num_traits;
-
-#[cfg(any(feature = "bzip2", feature = "gzip"))]
-#[macro_use]
-extern crate lazy_static;
-
-#[cfg(feature = "bzip2")]
-#[macro_use]
-extern crate log;
-
 #[cfg(feature = "std")]
-extern crate std as core;
+pub(crate) use std as core;
 
 #[cfg(not(feature = "std"))]
-#[macro_use(vec)]
-extern crate alloc;
+pub(crate) use core;
 
-#[cfg(test)]
-extern crate rand;
-#[cfg(test)]
-extern crate simple_logger;
+#[cfg(not(feature = "std"))]
+// #[macro_use(vec)]
+extern crate alloc;
 
 mod action;
 mod adler32;
@@ -83,48 +68,50 @@ mod gzip;
 mod zlib;
 
 pub mod prelude {
-    pub use action::Action;
+    pub use crate::action::Action;
+    use cfg_if::cfg_if;
+
     cfg_if! {
         if #[cfg(feature = "bzip2")] {
-            pub use bzip2::decoder::BZip2Decoder;
-            pub use bzip2::encoder::BZip2Encoder;
-            pub use bzip2::error::BZip2Error;
+            pub use crate::bzip2::decoder::BZip2Decoder;
+            pub use crate::bzip2::encoder::BZip2Encoder;
+            pub use crate::bzip2::error::BZip2Error;
         }
     }
 
     cfg_if! {
         if #[cfg(feature = "deflate")] {
-            pub use deflate::decoder::Deflater;
-            pub use deflate::encoder::Inflater;
+            pub use crate::deflate::decoder::Deflater;
+            pub use crate::deflate::encoder::Inflater;
         }
     }
     cfg_if! {
         if #[cfg(feature = "gzip")] {
-            pub use gzip::decoder::GZipDecoder;
-            pub use gzip::encoder::GZipEncoder;
+            pub use crate::gzip::decoder::GZipDecoder;
+            pub use crate::gzip::encoder::GZipEncoder;
         }
     }
     cfg_if! {
         if #[cfg(feature = "lzhuf")] {
-            pub use lzhuf::LzhufMethod;
-            pub use lzhuf::decoder::LzhufDecoder;
-            pub use lzhuf::encoder::LzhufEncoder;
+            pub use crate::lzhuf::LzhufMethod;
+            pub use crate::lzhuf::decoder::LzhufDecoder;
+            pub use crate::lzhuf::encoder::LzhufEncoder;
         }
     }
     cfg_if! {
         if #[cfg(feature = "zlib")] {
-            pub use zlib::decoder::ZlibDecoder;
-            pub use zlib::encoder::ZlibEncoder;
+            pub use crate::zlib::decoder::ZlibDecoder;
+            pub use crate::zlib::encoder::ZlibEncoder;
         }
     }
     cfg_if! {
         if #[cfg(feature = "lzss")] {
-            pub use lzss::decoder::LzssDecoder;
-            pub use lzss::encoder::LzssEncoder;
-            pub use lzss::LzssCode;
+            pub use crate::lzss::decoder::LzssDecoder;
+            pub use crate::lzss::encoder::LzssEncoder;
+            pub use crate::lzss::LzssCode;
         }
     }
-    pub use error::CompressionError;
-    pub use traits::decoder::{DecodeExt, DecodeIterator, Decoder};
-    pub use traits::encoder::{EncodeExt, EncodeIterator, Encoder};
+    pub use crate::error::CompressionError;
+    pub use crate::traits::decoder::{DecodeExt, DecodeIterator, Decoder};
+    pub use crate::traits::encoder::{EncodeExt, EncodeIterator, Encoder};
 }

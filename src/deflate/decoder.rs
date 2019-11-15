@@ -5,28 +5,32 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-use bitio::direction::right::Right;
-use bitio::reader::{BitRead, BitReader};
-use deflate::{
+use crate::bitio::direction::right::Right;
+use crate::bitio::reader::{BitRead, BitReader};
+use crate::deflate::{
     fix_offset_table, fix_symbol_table, gen_len_tab, gen_off_tab, CodeTable,
 };
-use error::CompressionError;
-use huffman::decoder::HuffmanDecoder;
-use lzss::decoder::LzssDecoder;
-use lzss::LzssCode;
-use traits::decoder::{
+use crate::error::CompressionError;
+use crate::huffman::decoder::HuffmanDecoder;
+use crate::lzss::decoder::LzssDecoder;
+use crate::lzss::LzssCode;
+use crate::traits::decoder::{
     BitDecodeService, BitDecoder, BitDecoderImpl, DecodeIterator, Decoder,
 };
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 
+#[derive(Debug)]
 enum DeflateHuffmanDecoder {
     HuffmanDecoder(HuffmanDecoder<Right>, bool),
     NoComp(u32),
 }
 
 impl DeflateHuffmanDecoder {
-    pub fn dec<R: BitRead, I: Iterator<Item = u8>>(
+    pub(crate) fn dec<R: BitRead, I: Iterator<Item = u8>>(
         &mut self,
         reader: &mut R,
         iter: &mut I,
@@ -62,7 +66,7 @@ impl DeflateHuffmanDecoder {
         }
     }
 
-    pub fn end(&self) -> bool {
+    pub(crate) fn end(&self) -> bool {
         match *self {
             DeflateHuffmanDecoder::HuffmanDecoder(_, end) => end,
             DeflateHuffmanDecoder::NoComp(block_size) => block_size == 0,
@@ -70,6 +74,7 @@ impl DeflateHuffmanDecoder {
     }
 }
 
+#[derive(Debug)]
 struct DeflaterInner {
     symbol_decoder: Option<DeflateHuffmanDecoder>,
     offset_decoder: Option<DeflateHuffmanDecoder>,
@@ -81,7 +86,7 @@ struct DeflaterInner {
 impl DeflaterInner {
     const SEARCH_TAB_LEN: usize = 12;
 
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             symbol_decoder: None,
             offset_decoder: None,
@@ -185,7 +190,7 @@ impl DeflaterInner {
         {
             // 無圧縮
             0 => {
-                reader.skip_to_next_byte();
+                let _ = reader.skip_to_next_byte();
                 let block_len = reader
                     .read_bits(16, iter)
                     .map_err(|_| CompressionError::UnexpectedEof)?
@@ -328,7 +333,8 @@ impl BitDecodeService for DeflaterInner {
     }
 }
 
-pub struct DeflaterBase {
+#[derive(Debug)]
+pub(crate) struct DeflaterBase {
     inner: DeflaterInner,
     lzss_decoder: LzssDecoder,
 }
@@ -342,14 +348,14 @@ impl Default for DeflaterBase {
 impl DeflaterBase {
     const MAX_BLOCK_SIZE: usize = 0x1_0000;
 
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             lzss_decoder: LzssDecoder::new(Self::MAX_BLOCK_SIZE),
             inner: DeflaterInner::new(),
         }
     }
 
-    pub fn with_dict(dict: &[u8]) -> Self {
+    pub(crate) fn with_dict(dict: &[u8]) -> Self {
         Self {
             lzss_decoder: LzssDecoder::with_dict(Self::MAX_BLOCK_SIZE, dict),
             inner: DeflaterInner::new(),
@@ -377,6 +383,7 @@ impl BitDecodeService for DeflaterBase {
     }
 }
 
+#[derive(Debug)]
 pub struct Deflater {
     inner: BitDecoderImpl<DeflaterBase>,
 }

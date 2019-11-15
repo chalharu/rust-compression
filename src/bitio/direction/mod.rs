@@ -5,13 +5,13 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-pub mod left;
-pub mod right;
+pub(crate) mod left;
+pub(crate) mod right;
 
-use core::ops::{Shl, Shr};
+use crate::core::ops::{Shl, Shr};
 use num_traits::Zero;
 
-pub trait Direction {
+pub(crate) trait Direction {
     fn forward<T>(value: T, count: usize) -> T
     where
         T: Shl<usize, Output = T> + Shr<usize, Output = T> + Zero;

@@ -8,7 +8,6 @@
 //! # Examples
 //!
 //! ```rust
-//! extern crate compression;
 //! use compression::prelude::*;
 //! use std::cmp::Ordering;
 //!
@@ -49,13 +48,13 @@
 //! ```
 #![cfg(feature = "lzss")]
 
-pub mod decoder;
-pub mod encoder;
+pub(crate) mod decoder;
+pub(crate) mod encoder;
 mod slidedict;
 
-use core::cmp::Ordering;
+use crate::core::cmp::Ordering;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum LzssCode {
     Symbol(u8),
     Reference { len: usize, pos: usize },
@@ -69,8 +68,8 @@ impl Default for LzssCode {
 
 #[derive(Clone, Debug)]
 pub(crate) struct MatchInfo {
-    pub len: usize,
-    pub pos: u16,
+    pub(crate) len: usize,
+    pub(crate) pos: u16,
 }
 
 fn compare_match_info<F: Fn(LzssCode, LzssCode) -> Ordering>(
@@ -94,7 +93,7 @@ fn compare_match_info<F: Fn(LzssCode, LzssCode) -> Ordering>(
 mod tests {
     use super::*;
 
-    pub fn comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
+    pub(crate) fn comparison(lhs: LzssCode, rhs: LzssCode) -> Ordering {
         match (lhs, rhs) {
             (
                 LzssCode::Reference {

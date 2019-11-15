@@ -1,6 +1,6 @@
 [package]
 name = "compression"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Mitsuharu Seki <mitsu1986@gmail.com>"]
 repository = "https://github.com/chalharu/rust-compression"
 keywords = ["compress", "gzip", "deflate", "bzip2", "no_std"]
@@ -8,6 +8,7 @@ license = "MPL-2.0"
 readme = "README.md"
 description = "Compression libraries implemented by pure Rust."
 documentation = "https://docs.rs/rust-compression/"
+edition = '2018'
 
 [lib]
 name = "compression"

@@ -5,17 +5,20 @@
 //! version 2.0 (the "License"). You can obtain a copy of the License at
 //! <http://mozilla.org/MPL/2.0/>.
 
-use action::Action;
-use adler32::Adler32;
+use crate::action::Action;
+use crate::adler32::Adler32;
+use crate::core::borrow::BorrowMut;
+use crate::core::hash::Hasher;
+use crate::core::marker::PhantomData;
+use crate::core::mem;
+use crate::deflate::encoder::Inflater;
+use crate::error::CompressionError;
+use crate::traits::encoder::Encoder;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use core::borrow::BorrowMut;
-use core::hash::Hasher;
-use core::marker::PhantomData;
-use core::mem;
-use deflate::encoder::Inflater;
-use error::CompressionError;
-use traits::encoder::Encoder;
 
 struct ScanIterator<I: Iterator, BI: BorrowMut<I>, F: FnMut(&I::Item) -> ()> {
     phantom: PhantomData<I>,
@@ -39,7 +42,7 @@ impl<I: Iterator, BI: BorrowMut<I>, F: FnMut(&I::Item) -> ()> Iterator
 impl<I: Iterator, BI: BorrowMut<I>, F: FnMut(&I::Item) -> ()>
     ScanIterator<I, BI, F>
 {
-    pub fn new(inner: BI, closure: F) -> Self {
+    pub(crate) fn new(inner: BI, closure: F) -> Self {
         Self {
             inner,
             closure,
@@ -48,6 +51,7 @@ impl<I: Iterator, BI: BorrowMut<I>, F: FnMut(&I::Item) -> ()>
     }
 }
 
+#[derive(Debug)]
 pub struct ZlibEncoder {
     inflater: Inflater,
     adler32: Option<Adler32>,
@@ -136,7 +140,7 @@ impl Encoder for ZlibEncoder {
                 }),
                 action,
             );
-            mem::replace(&mut self.adler32, adler32);
+            let _ = mem::replace(&mut self.adler32, adler32);
             if ret.is_none() {
                 let hash = self.adler32.as_mut().unwrap().finish() as u32;
                 let ret = (hash >> 24) as u8;
@@ -152,7 +156,7 @@ impl Encoder for ZlibEncoder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use traits::encoder::EncodeExt;
+    use crate::traits::encoder::EncodeExt;
 
     #[test]
     fn test_unit() {
